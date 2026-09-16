@@ -656,7 +656,8 @@ function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c=>({"&":"&amp;","<"
 function normalizeText(s){
   return String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").toLowerCase().trim();
 }
-function formatMoney(v){ return new Intl.NumberFormat("vi-VN").format(Number(v||0)) + "đ"; }
+function formatNumberComma(v){ return new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(Math.round(Number(v||0))); }
+function formatMoney(v){ return formatNumberComma(v) + "đ"; }
 function formatPct(v){ return Math.round(Number(v||0)*100) + "%"; }
 function maxDiscount(p){ return Math.max(Number(p.discount6||0), Number(p.discount12||0)); }
 function clampText(s,n=70){ s=String(s||""); return s.length>n?s.slice(0,n-1)+"…":s; }
@@ -1033,10 +1034,10 @@ async function exportQuoteExcel(){
       p.name,
       [p.active,p.strength].filter(Boolean).join(" · "),
       p.package,
-      Number(p.price||0),
-      Number(p.price6||0),
+      formatNumberComma(p.price||0),
+      formatNumberComma(p.price6||0),
       Number(p.discount6||0),
-      Number(p.price12||0),
+      formatNumberComma(p.price12||0),
       Number(p.discount12||0)
     ];
     ws.getRow(rr).height=36;
@@ -1047,7 +1048,9 @@ async function exportQuoteExcel(){
       cell.alignment={vertical:"middle",wrapText:true,horizontal:[1,7,9].includes(c)?"center":([5,6,8].includes(c)?"right":"left")};
       if(i%2===1) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFFFAF9"}};
     }
-    [5,6,8].forEach(c=>ws.getCell(rr,c).numFmt='#,##0 "₫"');
+    // Giá tiền xuất dưới dạng chuỗi có dấu phẩy hàng nghìn để luôn hiển thị 200,000 theo chuẩn IDECO,
+    // không phụ thuộc thiết lập dấu phân cách của Excel trên từng máy.
+    [5,6,8].forEach(c=>{ ws.getCell(rr,c).numFmt='@'; ws.getCell(rr,c).alignment={vertical:"middle",horizontal:"right"}; });
     [7,9].forEach(c=>ws.getCell(rr,c).numFmt="0%");
   });
 
@@ -1298,16 +1301,66 @@ function colIndex(headers,variants){
   return -1;
 }
 function parseNum(v){
-  if(typeof v==="number")return v;
-  let s=String(v??"").replace(/[%₫đ\s]/g,"");
+  // Số thông thường / %: vẫn cho phép phần thập phân. KHÔNG dùng hàm này cho tiền VNĐ.
+  if(typeof v==="number")return Number.isFinite(v)?v:0;
+  let s=String(v??"").replace(/[%₫đ\s\u00A0]/g,"").trim();
   if(!s)return 0;
-  if((s.match(/\./g)||[]).length>1 && !s.includes(","))s=s.replace(/\./g,"");
-  else if(s.includes(",")&&!s.includes("."))s=s.replace(",",".");
-  else if(s.includes(",")&&s.includes("."))s=s.replace(/\./g,"").replace(",",".");
+  // Với số thường: 13,5 -> 13.5; 0,13 -> 0.13.
+  if(s.includes(",")&&!s.includes(".")) s=s.replace(",",".");
+  else if(s.includes(",")&&s.includes(".")){
+    // Kiểu 1.234,56 hoặc 1,234.56: dấu xuất hiện cuối cùng được coi là dấu thập phân.
+    const lastComma=s.lastIndexOf(","), lastDot=s.lastIndexOf(".");
+    if(lastComma>lastDot) s=s.replace(/\./g,"").replace(",",".");
+    else s=s.replace(/,/g,"");
+  }
   const n=Number(s.replace(/[^\d.-]/g,""));
   return Number.isFinite(n)?n:0;
 }
+
+// QUAN TRỌNG: tiền VNĐ là số nguyên. Dấu chấm / dấu phẩy trong bảng giá là dấu phân cách hàng nghìn.
+// Ví dụ: 222,000 = 222000; 193.140 = 193140; 1.000.000 = 1000000.
+// Đồng thời vẫn chịu được chuỗi kiểu 222000.00 nếu nguồn nào đó xuất phần thập phân .00.
+function parseMoneyVND(v){
+  if(typeof v==="number") return Number.isFinite(v)?Math.round(v):0;
+  let s=String(v??"").replace(/[₫đĐ\s\u00A0]/g,"").trim();
+  if(!s) return 0;
+  const neg=s.startsWith("-");
+  s=s.replace(/-/g,"").replace(/[^\d.,]/g,"");
+  if(!s) return 0;
+
+  const dots=(s.match(/\./g)||[]).length;
+  const commas=(s.match(/,/g)||[]).length;
+  const lastDot=s.lastIndexOf("."), lastComma=s.lastIndexOf(",");
+  const lastSep=Math.max(lastDot,lastComma);
+  const fracLen=lastSep>=0 ? s.length-lastSep-1 : -1;
+
+  let normalized;
+  if(lastSep>=0 && fracLen===2){
+    // Chỉ coi 2 số cuối là phần thập phân khi phần trước KHÔNG có cấu trúc nghìn thuần túy.
+    // 222,000 có 3 số cuối => chắc chắn là 222000; 222000.00 => 222000.00.
+    const before=s.slice(0,lastSep).replace(/[.,]/g,"");
+    const sep=s[lastSep];
+    const sameCount=sep==="."?dots:commas;
+    if(sameCount===1 && before.length>=4){
+      normalized=before+"."+s.slice(lastSep+1);
+    }else{
+      normalized=s.replace(/[.,]/g,"");
+    }
+  }else{
+    // Giá VNĐ trong file IDECO: mọi dấu . hoặc , còn lại đều là phân cách hàng nghìn.
+    normalized=s.replace(/[.,]/g,"");
+  }
+  const n=Number(normalized);
+  return Number.isFinite(n)?Math.round(neg?-n:n):0;
+}
 function pct(v){ let n=parseNum(v); if(n>1)n=n/100; return n; }
+function verifyMoneyParser(){
+  const tests=[["222,000",222000],["193.140",193140],["1.000.000",1000000],["113,400",113400],["156000",156000],[222000,222000],["222000.00",222000]];
+  const bad=tests.filter(([raw,expect])=>parseMoneyVND(raw)!==expect);
+  if(bad.length) console.error("[IDECO] LỖI BỘ ĐỌC GIÁ VNĐ",bad);
+  else console.info("[IDECO] Bộ đọc giá VNĐ OK: 222,000 → 222000; 193.140 → 193140");
+}
+verifyMoneyParser();
 function parseExcelRows(matrix){
   const scan=matrix.slice(0,12);
   let best=0,bestScore=-1;
@@ -1348,11 +1401,11 @@ function parseExcelRows(matrix){
     package:String(get(r,"package")||"").trim(),
     manufacturer:String(get(r,"manufacturer")||"").trim(),
     origin:String(get(r,"origin")||"").trim(),
-    price:Math.round(parseNum(get(r,"price"))),
+    price:parseMoneyVND(get(r,"price")),
     discount6:pct(get(r,"discount6")),
-    price6:Math.round(parseNum(get(r,"price6"))),
+    price6:parseMoneyVND(get(r,"price6")),
     discount12:pct(get(r,"discount12")),
-    price12:Math.round(parseNum(get(r,"price12"))),
+    price12:parseMoneyVND(get(r,"price12")),
     category:String(get(r,"category")||"Khác").trim(),
     updated:String(get(r,"updated")||"").trim().toUpperCase()==="A"
   }));
