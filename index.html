@@ -405,10 +405,9 @@ a{color:inherit}
   <section class="hero">
     <div class="hero-card">
       <div class="hero-copy">
-        <span class="hero-kicker">💊 CATALOGUE &amp; BÁO GIÁ ĐIỆN TỬ</span>
-        <h1 id="heroTitle">BÁO GIÁ THUỐC<br>CÔNG TY IDECO</h1>
-        <div class="hero-sub" id="heroSubtitle">Tìm nhanh theo tên thuốc, hoạt chất, công dụng hoặc nhóm điều trị với hơn 700 sản phẩm - Chọn sản phẩm trong giỏ-bấm xuất file danh mục mình chọn. Cám ơn Anh/chị và mong hợp tác </div>
-		
+        <span class="hero-kicker">💊 CATALOGUE &amp; BÁO GIÁ ĐIỆN TỬ PHÂN PHỐI</span>
+        <h1 id="heroTitle">BẢNG BÁO GIÁ THUỐC OTC- ETC</h1>
+        <div class="hero-sub" id="heroSubtitle">Tìm nhanh tên thuốc và nhóm điều trị mong muốn hợp tác với hơn 700 sản phẩm - Tiện lợi - dễ dàng trên Mobile - Chọn sản phẩm hợp tác - vào giỏ hàng xuất Excel báo giá. Cám ơn Anh/ Chị Khách hàng hợp tác !</div>
         <div class="hero-stats">
           <div class="stat-pill"><b id="statProducts">0</b><small>Sản phẩm</small></div>
           <div class="stat-pill"><b id="statCategories">0</b><small>Nhóm điều trị</small></div>
@@ -616,8 +615,8 @@ const ADMIN_PASS_HASH = "496fa0ed71d26dda7dc0a7e3c310849d8418de16b01d26ef6c292f7
 
 const DEFAULT_SETTINGS = {
   company: "CÔNG TY TNHH TM - DV KẾT GIAO PHÁT TRIỂN QUỐC TẾ (IDECO)",
-  title: "BÁO GIÁ THUỐC\\nCÔNG TY IDECO",
-  subtitle: "Tìm nhanh theo tên thuốc, hoạt chất, công dụng hoặc nhóm điều trị. Giá và mức chiết khấu được trình bày rõ ràng trên mọi thiết bị.",
+  title: "BẢNG BÁO GIÁ THUỐC OTC- ETC",
+  subtitle: "Tìm nhanh tên thuốc và nhóm điều trị mong muốn hợp tác với hơn 700 sản phẩm - Tiện lợi - dễ dàng trên Mobile - Chọn sản phẩm hợp tác - vào giỏ hàng xuất Excel báo giá. Cám ơn Anh/ Chị Khách hàng hợp tác !",
   hotline: "",
   orderEmail: "",
   address: "003 Carillon 5, 262/3 Lũy Bán Bích, P. Tân Phú, TP. Hồ Chí Minh",
@@ -698,6 +697,22 @@ function productByCode(code){ return products.find(p=>p.code===code); }
 
 function initData(list, source="local"){
   products=hydrate(list);
+
+  // Khi dữ liệu đến từ Firebase, bảng giá realtime là nguồn chuẩn tuyệt đối.
+  // Xóa khỏi giỏ những sản phẩm đã bị xóa ở file TRACUU để giao diện không giữ dữ liệu ma.
+  if(source==="remote"){
+    const validCodes=new Set(products.map(p=>String(p.code||"")));
+    let cartChanged=false;
+    Object.keys(cart||{}).forEach(code=>{
+      if(!validCodes.has(String(code))){ delete cart[code]; cartChanged=true; }
+    });
+    if(cartChanged){
+      localStorage.setItem(LS_CART,JSON.stringify(cart));
+      updateCartCount();
+    }
+    if(selectedCategory!=="Tất cả" && !products.some(p=>p.category===selectedCategory)) selectedCategory="Tất cả";
+  }
+
   renderStats();
   renderCategories();
   renderFeatured();
@@ -1079,7 +1094,17 @@ function setConnection(mode,text){
 }
 
 function applySettings(s){
-  settings={...DEFAULT_SETTINGS,...(s||{})};
+  // Tự động thay nội dung tiêu đề cũ đang lưu trên Firebase bằng nội dung Catalogue mới.
+  const incoming={...(s||{})};
+  const oldTitles=[
+    "BÁO GIÁ THUỐC\\nCÔNG TY IDECO",
+    "BÁO GIÁ THUỐC\nCÔNG TY IDECO",
+    "BÁO GIÁ THUỐC CÔNG TY IDECO"
+  ];
+  const oldSubtitle="Tìm nhanh theo tên thuốc, hoạt chất, công dụng hoặc nhóm điều trị. Giá và mức chiết khấu được trình bày rõ ràng trên mọi thiết bị.";
+  if(!incoming.title || oldTitles.includes(String(incoming.title))) incoming.title=DEFAULT_SETTINGS.title;
+  if(!incoming.subtitle || String(incoming.subtitle).trim()===oldSubtitle) incoming.subtitle=DEFAULT_SETTINGS.subtitle;
+  settings={...DEFAULT_SETTINGS,...incoming};
   $("miniCompany").textContent=settings.company;
   $("footerCompany").textContent=settings.company;
   $("heroTitle").innerHTML=esc(settings.title).replace(/\n/g,"<br>");
@@ -1155,35 +1180,40 @@ function initFirebase(){
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database(); auth=null;
     setConnection("","Đang kết nối");
-    let gotRemote=false;
+    let hasReceivedRemoteSnapshot=false;
 
-    // Realtime listener: file 2 ghi Excel vào priceData => file 1 cập nhật ngay.
+    // ĐỒNG BỘ TUYỆT ĐỐI: priceData của file TRACUU là nguồn chuẩn duy nhất cho catalogue.
+    // Mọi thay đổi thêm / sửa / xóa / xóa sạch ở file 2 đều phản ánh ngay ở file 1.
     db.ref(SHARED_PRICE_PATH).on("value",snap=>{
       try{
+        hasReceivedRemoteSnapshot=true;
         const shared=snap.val();
         const arr=sharedPriceDataToProducts(shared||{});
         remoteReadOK=true;
+
+        // Quan trọng: kể cả priceData không tồn tại, files rỗng hoặc Firebase lược bỏ mảng rỗng,
+        // vẫn phải xóa giao diện hiện tại. Không được giữ bảng giá cũ / EMBEDDED_PRODUCTS.
+        initData(arr,"remote");
+
+        const updatedAt=shared&&shared.lastUpdated ? new Date(shared.lastUpdated) : null;
+        const timeText=updatedAt && !Number.isNaN(updatedAt.getTime())
+          ? ` · ${updatedAt.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : "";
         if(arr.length){
-          gotRemote=true;
-          initData(arr,"remote");
-          setConnection("online",`Firebase realtime · ${arr.length.toLocaleString("vi-VN")} SP`);
-        }else if(shared && shared.files){
-          gotRemote=true;
-          initData([],"remote");
-          setConnection("offline","Đang chờ bảng giá mới");
-        }else if(!gotRemote){
-          initData(EMBEDDED_PRODUCTS,"local");
-          setConnection("offline","Firebase chưa có dữ liệu");
+          setConnection("online",`Firebase realtime · ${arr.length.toLocaleString("vi-VN")} SP${timeText}`);
+        }else{
+          setConnection("online",`Firebase realtime · 0 SP · bảng giá đã xóa/chưa có dữ liệu${timeText}`);
         }
       }catch(err){
         console.warn("Parse shared priceData:",err);
-        if(!gotRemote) initData(EMBEDDED_PRODUCTS,"local");
-        setConnection("offline","Dữ liệu tích hợp");
+        // Không quay về dữ liệu tích hợp vì sẽ tạo cảm giác sai rằng bảng giá file 2 vẫn còn.
+        initData([],"remote");
+        setConnection("offline","Lỗi đọc bảng giá Firebase");
       }
     },err=>{
       console.warn("Firebase read:",err);
-      if(!products.length)initData(EMBEDDED_PRODUCTS,"local");
-      setConnection("offline","Dữ liệu tích hợp");
+      // Khi mất kết nối, không nạp dữ liệu mẫu cũ. Nếu chưa từng nhận snapshot thì hiển thị trống.
+      if(!hasReceivedRemoteSnapshot) initData([],"remote");
+      setConnection("offline","Mất kết nối Firebase");
     });
 
     db.ref(SETTINGS_PATH).on("value",snap=>{ if(snap.exists())applySettings(snap.val()); });
@@ -1501,7 +1531,7 @@ $("saveSettingsBtn").onclick=async()=>{
   if(!db||!adminUnlocked){showToast("Cần mở cài đặt bằng mật khẩu");return}
   const s={
     company:$("setCompany").value.trim()||DEFAULT_SETTINGS.company,
-    title:($("setTitle").value.trim()||"BÁO GIÁ THUỐC CÔNG TY IDECO").replace(/ CÔNG TY IDECO$/,"\\nCÔNG TY IDECO"),
+    title:$("setTitle").value.trim()||DEFAULT_SETTINGS.title,
     subtitle:$("setSubtitle").value.trim(),
     hotline:$("setHotline").value.trim(),
     orderEmail:$("setOrderEmail").value.trim(),
