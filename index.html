@@ -384,6 +384,10 @@ a{color:inherit}
   .detail-list,.detail-discounts,.form-grid{grid-template-columns:1fr}
   .field.full{grid-column:auto}
 }
+.bulk-cart-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+.bulk-cart-actions small{color:var(--muted);font-size:12px;line-height:1.5}
+#addAllToCartBtn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+@media(max-width:600px){#addAllToCartBtn{width:100%;min-height:46px}.bulk-cart-actions small{width:100%}}
 </style>
 </head>
 <body>
@@ -467,6 +471,10 @@ a{color:inherit}
           <option value="priceDesc">Giá cao → thấp</option>
           <option value="discount">Chiết khấu cao nhất</option>
         </select>
+      </div>
+      <div class="bulk-cart-actions">
+        <button type="button" id="addAllToCartBtn" class="primary-btn" disabled aria-describedby="bulkCartHint">🛒 Chọn tất cả vào giỏ (0 sản phẩm)</button>
+        <small id="bulkCartHint">Chọn toàn bộ kết quả lọc, kể cả sản phẩm chưa cuộn tới. Sản phẩm mới: 1 hộp; sản phẩm đã có trong giỏ giữ nguyên số lượng.</small>
       </div>
       <div id="productGrid" class="product-grid"></div>
       <div id="emptyState" class="empty hidden"><div class="big">🔍</div><b>Chưa tìm thấy sản phẩm phù hợp</b><div>Thử tên hoạt chất, công dụng hoặc bỏ bớt bộ lọc.</div></div>
@@ -783,6 +791,7 @@ function applyFilters(){
   $("resultCount").textContent=filtered.length.toLocaleString("vi-VN");
   $("filterPreviewCount").textContent=filtered.length.toLocaleString("vi-VN");
   updateFilterUI();
+  updateBulkCartButton();
   renderProducts();
 }
 function updateFilterUI(){
@@ -886,6 +895,29 @@ function addToCart(code,qty=1){
   cart[code]=(cart[code]||0)+qty;
   localStorage.setItem(LS_CART,JSON.stringify(cart));
   updateCartCount(); showToast("Đã thêm vào yêu cầu báo giá");
+}
+function updateBulkCartButton(){
+  const button=$("addAllToCartBtn");
+  button.disabled=filtered.length===0;
+  button.textContent=`🛒 Chọn tất cả vào giỏ (${filtered.length.toLocaleString("vi-VN")} sản phẩm)`;
+}
+function addAllFilteredToCart(){
+  if(!filtered.length){showToast("Chưa có sản phẩm phù hợp để thêm vào giỏ.");return;}
+  const nextCart={...cart};
+  let added=0;
+  filtered.forEach(p=>{
+    if(!(Number(nextCart[p.code])>0)){nextCart[p.code]=1;added++;}
+  });
+  if(!added){showToast("Tất cả sản phẩm trong kết quả lọc đã có trong giỏ.");return;}
+  try{
+    localStorage.setItem(LS_CART,JSON.stringify(nextCart));
+  }catch(err){
+    showToast("Không lưu được giỏ hàng. Vui lòng kiểm tra bộ nhớ trình duyệt và thử lại.");return;
+  }
+  cart=nextCart;
+  updateCartCount();
+  renderCart();
+  showToast(`Đã thêm ${added} sản phẩm vào giỏ. Có thể mở Giỏ báo giá để chỉnh số lượng.`);
 }
 function setCartQty(code,qty){
   qty=parseInt(qty||0,10);
@@ -1544,6 +1576,7 @@ $("searchInput").addEventListener("input",e=>{
 });
 $("searchInput").addEventListener("focus",suggestions);
 $("clearSearch").onclick=()=>{searchText="";$("searchInput").value="";$("clearSearch").classList.add("hidden");$("suggestions").classList.add("hidden");applyFilters();$("searchInput").focus()};
+$("addAllToCartBtn").onclick=addAllFilteredToCart;
 $("sortSelect").onchange=e=>{sortMode=e.target.value;applyFilters()};
 $("filterBtn").onclick=()=>{updateFilterUI();$("filterPreviewCount").textContent=currentFilter().length.toLocaleString("vi-VN");openOverlay("filterOverlay")};
 $("filterUpdated").onclick=()=>{onlyUpdated=!onlyUpdated;updateFilterUI();$("filterPreviewCount").textContent=currentFilter().length.toLocaleString("vi-VN")};
