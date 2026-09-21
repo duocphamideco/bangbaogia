@@ -650,7 +650,7 @@ const ROOT_PATH = "idecoBaoGiaThuoc";
 const SETTINGS_PATH = ROOT_PATH + "/settings";
 const META_PATH = ROOT_PATH + "/meta";
 const STAGING_PATH = ROOT_PATH + "/excelStaging";
-const ADMIN_PASS_HASH = "496fa0ed71d26dda7dc0a7e3c310849d8418de16b01d26ef6c292f7db9a2f3ca";
+const ADMIN_PASS_HASH = "b8a57977041c2b2ba8baab472c1f0240a30b671a9fb027f9e4d73b52818b0b29";
 
 const DEFAULT_SETTINGS = {
   company: "CÔNG TY TNHH TM - DV KẾT GIAO PHÁT TRIỂN QUỐC TẾ (IDECO)",
@@ -668,7 +668,8 @@ let pendingImport = [];
 let pendingImportFileName = "";
 let stagedProducts = [];
 let stagedMeta = null;
-let adminUnlocked = sessionStorage.getItem("ideco_admin_unlocked_v3")==="1";
+let adminUnlocked = false;
+try { adminUnlocked = sessionStorage.getItem("ideco_admin_unlocked_v3")==="1"; } catch {}
 let settings = {...DEFAULT_SETTINGS};
 let selectedCategory = "Tất cả";
 let onlyUpdated = false;
@@ -1329,10 +1330,42 @@ async function writeProducts(list,sourceLabel){
     cleared: false
   });
 }
+function sha256Fallback(text){
+  const encoded=unescape(encodeURIComponent(String(text||"")));
+  const bytes=Array.from(encoded,c=>c.charCodeAt(0));
+  const length=bytes.length;
+  bytes.push(128);
+  while(bytes.length%64!==56) bytes.push(0);
+  const hi=Math.floor(length/0x20000000), lo=(length*8)>>>0;
+  for(const word of [hi,lo]) for(let shift=24;shift>=0;shift-=8) bytes.push((word>>>shift)&255);
+  const K=[1116352408, 1899447441, 3049323471, 3921009573, 961987163, 1508970993, 2453635748, 2870763221, 3624381080, 310598401, 607225278, 1426881987, 1925078388, 2162078206, 2614888103, 3248222580, 3835390401, 4022224774, 264347078, 604807628, 770255983, 1249150122, 1555081692, 1996064986, 2554220882, 2821834349, 2952996808, 3210313671, 3336571891, 3584528711, 113926993, 338241895, 666307205, 773529912, 1294757372, 1396182291, 1695183700, 1986661051, 2177026350, 2456956037, 2730485921, 2820302411, 3259730800, 3345764771, 3516065817, 3600352804, 4094571909, 275423344, 430227734, 506948616, 659060556, 883997877, 958139571, 1322822218, 1537002063, 1747873779, 1955562222, 2024104815, 2227730452, 2361852424, 2428436474, 2756734187, 3204031479, 3329325298];
+  const h=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const r=(v,n)=>(v>>>n)|(v<<(32-n));
+  for(let offset=0;offset<bytes.length;offset+=64){
+    const w=new Uint32Array(64);
+    for(let i=0;i<16;i++){const j=offset+i*4;w[i]=(bytes[j]<<24)|(bytes[j+1]<<16)|(bytes[j+2]<<8)|bytes[j+3];}
+    for(let i=16;i<64;i++){
+      const a=w[i-15],b=w[i-2];
+      w[i]=(w[i-16]+(r(a,7)^r(a,18)^(a>>>3))+w[i-7]+(r(b,17)^r(b,19)^(b>>>10)))>>>0;
+    }
+    let [a,b,c,d,e,f,g,z]=h;
+    for(let i=0;i<64;i++){
+      const t1=(z+(r(e,6)^r(e,11)^r(e,25))+((e&f)^(~e&g))+K[i]+w[i])>>>0;
+      const t2=((r(a,2)^r(a,13)^r(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+      z=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    [a,b,c,d,e,f,g,z].forEach((v,i)=>h[i]=(h[i]+v)>>>0);
+  }
+  return h.map(v=>v.toString(16).padStart(8,'0')).join('');
+}
 async function sha256Text(text){
-  const data=new TextEncoder().encode(String(text||""));
-  const digest=await crypto.subtle.digest("SHA-256",data);
-  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,"0")).join("");
+  try{
+    if(globalThis.crypto && globalThis.crypto.subtle && typeof TextEncoder!=='undefined'){
+      const digest=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(text||'')));
+      return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(error){ /* Fallback also works in HTTP/file previews. */ }
+  return sha256Fallback(text);
 }
 function updateAdminUI(){
   $("adminLogin").classList.toggle("hidden",adminUnlocked);
@@ -1347,13 +1380,13 @@ async function unlockAdmin(){
   const hash=await sha256Text(input);
   if(hash!==ADMIN_PASS_HASH) throw new Error("Mật khẩu không đúng.");
   adminUnlocked=true;
-  sessionStorage.setItem("ideco_admin_unlocked_v3","1");
+  try { sessionStorage.setItem("ideco_admin_unlocked_v3","1"); } catch {}
   $("adminPasswordOnly").value="";
   updateAdminUI();
 }
 function lockAdmin(){
   adminUnlocked=false;
-  sessionStorage.removeItem("ideco_admin_unlocked_v3");
+  try { sessionStorage.removeItem("ideco_admin_unlocked_v3"); } catch {}
   updateAdminUI();
 }
 
