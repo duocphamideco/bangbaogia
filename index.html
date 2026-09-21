@@ -613,6 +613,37 @@ const FIREBASE_CONFIG = {
   appId: "1:736670340278:web:788716a477fef3ba1a0217"
 };
 // Nguồn bảng giá dùng chung với TRACUU_BAOGIA_GOOGLEMAP_BO_Y_TE
+
+// IDECO sync v11: common, explicit header/number semantics in both applications.
+const IdecoPrice = (()=>{
+ const norm=v=>String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/[^a-z0-9]+/g,'');
+ function field(v){
+  const k=norm(v), tier=k.includes('12hop')?12:k.includes('6hop')?6:0;
+  if(tier && /^(ck|chietkhau)/.test(k)) return 'discount'+tier;
+  if(tier && /^(gia|muatren)/.test(k)) return 'price'+tier;
+  if(/^(dongia|giaban)/.test(k)&&!tier) return 'price';
+  const aliases={code:['masp','masanpham','mahang','sku','productcode'],name:['tenthuoc','tensanpham','tenhang','hanghoa'],category:['nhom','nhomdieutri','loaidieutri'],manufacturer:['nsx','nhasanxuat'],use:['congdung','congdungchinh']};
+  for(const [f,ks] of Object.entries(aliases)) if(ks.includes(k)) return f;
+  return k;
+ }
+ function money(v){
+  if(typeof v==='number') return Number.isFinite(v)?Math.round(v):NaN;
+  let s=String(v??'').trim().replace(/[^\d.,-]/g,''); if(!s) return NaN;
+  const pos=Math.max(s.lastIndexOf('.'),s.lastIndexOf(','));
+  if(pos>=0 && s.length-pos-1>0 && s.length-pos-1<=2) s=s.slice(0,pos).replace(/[.,]/g,'')+'.'+s.slice(pos+1);
+  else s=s.replace(/[.,]/g,'');
+  const n=Number(s); return Number.isFinite(n)?Math.round(n):NaN;
+ }
+ function percent(v,unit='points'){
+  if(v==null||String(v).trim()==='') return NaN;
+  const s=String(v).trim(), n=Number(s.replace(/%/g,'').replace(',','.'));
+  if(!Number.isFinite(n)) return NaN;
+  return s.includes('%')||unit==='points'?n:n*100;
+ }
+ const key=v=>String(v??'').trim().toLowerCase().replace(/[\u0000-\u001F\u007F]/g,'').replace(/[.#$/\[\]]/g,c=>({'.':'(d)','#':'(h)','$':'(s)','/':'(sl)','[':'(lb)',']':'(rb)'}[c])).slice(0,700);
+ return {norm,field,money,percent,key};
+})();
+
 const SHARED_PRICE_PATH = "priceData";
 // Nhánh riêng của Báo giá điện tử: chỉ lưu cài đặt và bản Excel chờ đồng bộ
 const ROOT_PATH = "idecoBaoGiaThuoc";
@@ -1172,7 +1203,8 @@ function normalizeSharedFiles(files){
   return fbArray(files).filter(Boolean).map(f=>({
     name:String((f&&f.name)||"Dữ liệu bảng giá"),
     importedAt:Number((f&&f.importedAt)||0),
-    data:fbArray(f&&f.data).map(r=>fbArray(r).map(c=>c==null?"":c))
+    discountUnit:f.discountUnit || (f.sourceType==="IDECO_BAO_GIA_DIEN_TU"?"fraction":"points"),
+    data:Array.from(fbArray(f&&f.data),r=>Array.from(fbArray(r),c=>c==null?"":c))
   })).filter(f=>f.data.length);
 }
 function sharedPriceDataToProducts(shared){
@@ -1180,26 +1212,43 @@ function sharedPriceDataToProducts(shared){
   const merged=new Map();
   files.forEach((file,fileIndex)=>{
     try{
-      const list=parseExcelRows(file.data);
+      const list=parseExcelRows(file.data,file.discountUnit);
       list.forEach((p,rowIndex)=>{
         const code=String(p.code||"").trim();
         const name=normalizeText(p.name||"");
         const key=code ? "C:"+normalizeText(code) : "N:"+name;
         if(!key || key==="N:") return;
         // File upload sau cùng thắng file trước, tương tự logic của TRACUU.
-        merged.set(key,{...p,_sharedFile:file.name,_sharedFileIndex:fileIndex,_sharedRowIndex:rowIndex});
+        merged.set(key,{...p,_importedAt:file.importedAt,_sharedFile:file.name,_sharedFileIndex:fileIndex,_sharedRowIndex:rowIndex});
       });
     }catch(err){
-      console.warn("Bỏ qua file bảng giá không đúng cấu trúc:",file.name,err);
+      throw new Error("Không đọc được bảng giá " + file.name + ": " + err.message);
     }
   });
   return [...merged.values()].map(p=>{ const x={...p}; delete x._sharedFile; delete x._sharedFileIndex; delete x._sharedRowIndex; return x; });
 }
+function applySavedPrices(list,saved,extra){
+ return list.map(p=>{
+  const x={...p}, row=saved[IdecoPrice.key(p.code)]||saved[String(p.code||'').trim().toLowerCase()]||{};
+  for(const mark of [6,12]){
+   const base=p['discount'+mark]*100, has=p['_hasCk'+mark];
+   let value=base, valid=has;
+   const override=IdecoPrice.percent(row[mark]);
+   if(Number(row._savedAt||0)>Number(p._importedAt||0) && Number.isFinite(override)){value=override;valid=true;}
+   if(has && extra!==null && extra!==undefined && extra!=='' && Number.isFinite(Number(extra))) value=Math.min(value,base+Number(extra));
+   x['discount'+mark]=value/100;
+   if(valid) x['price'+mark]=Math.round(x.price*(1-value/100));
+  }
+  if(!x.code) x.code='NAME:'+normalizeText(x.name);
+  return x;
+ });
+}
+
 function productsToSharedMatrix(list){
   const header=["STT","Mã sp","Tên thuốc","Hoạt chất","Hàm lượng","Công dụng chính","Quy cách","NSX","Xuất xứ","Đơn giá (VNĐ)","CK ≥ 6 hộp","Giá mua từ 6 hộp (VNĐ)","CK ≥12 hộp","Giá mua từ 12 hộp (VNĐ)","Nhóm điều trị","Đã cập nhật"];
   const rows=hydrate(list).map((p,i)=>[
     p.stt||i+1,p.code,p.name,p.active||"",p.strength||"",p.use||"",p.package||"",p.manufacturer||"",p.origin||"",
-    Number(p.price||0),Number(p.discount6||0),Number(p.price6||0),Number(p.discount12||0),Number(p.price12||0),p.category||"Khác",p.updated?"A":""
+    Number(p.price||0),Number(p.discount6||0)*100,Number(p.price6||0),Number(p.discount12||0)*100,Number(p.price12||0),p.category||"Khác",p.updated?"A":""
   ]);
   return [header,...rows];
 }
@@ -1207,8 +1256,8 @@ function productsToSharedMatrix(list){
 /* Firebase */
 function initFirebase(){
   if(!window.firebase){
-    setConnection("offline","Dữ liệu tích hợp");
-    initData(EMBEDDED_PRODUCTS,"local");
+    setConnection("offline","Chưa kết nối được bảng giá chuẩn");
+    initData([],"local");
     return;
   }
   try{
@@ -1217,46 +1266,38 @@ function initFirebase(){
     setConnection("","Đang kết nối");
     let hasReceivedRemoteSnapshot=false;
 
-    // ĐỒNG BỘ TUYỆT ĐỐI: priceData của file TRACUU là nguồn chuẩn duy nhất cho catalogue.
-    // Mọi thay đổi thêm / sửa / xóa / xóa sạch ở file 2 đều phản ánh ngay ở file 1.
-    db.ref(SHARED_PRICE_PATH).on("value",snap=>{
-      try{
-        hasReceivedRemoteSnapshot=true;
-        const shared=snap.val();
-        const arr=sharedPriceDataToProducts(shared||{});
-        remoteReadOK=true;
-
-        // Quan trọng: kể cả priceData không tồn tại, files rỗng hoặc Firebase lược bỏ mảng rỗng,
-        // vẫn phải xóa giao diện hiện tại. Không được giữ bảng giá cũ / EMBEDDED_PRODUCTS.
+    const syncState={};
+    const refresh=()=>{
+      if(!['prices','discounts','cap'].every(k=>Object.prototype.hasOwnProperty.call(syncState,k))) return;
+      try {
+        const arr=applySavedPrices(sharedPriceDataToProducts(syncState.prices||{}),syncState.discounts||{},syncState.cap);
+        hasReceivedRemoteSnapshot=true; remoteReadOK=true;
         initData(arr,"remote");
-
-        const updatedAt=shared&&shared.lastUpdated ? new Date(shared.lastUpdated) : null;
-        const timeText=updatedAt && !Number.isNaN(updatedAt.getTime())
-          ? ` · ${updatedAt.toLocaleTimeString("vi-VN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}` : "";
-        if(arr.length){
-          setConnection("online",`Firebase realtime · ${arr.length.toLocaleString("vi-VN")} SP${timeText}`);
-        }else{
-          setConnection("online",`Firebase realtime · 0 SP · bảng giá đã xóa/chưa có dữ liệu${timeText}`);
-        }
+        if(!$("cartOverlay").classList.contains("hidden")) renderCart();
+        if(!$("detailOverlay").classList.contains("hidden")) closeOverlay("detailOverlay");
+        setConnection("online",`Đã đồng bộ giá & CK · ${arr.length} SP · ${new Date().toLocaleTimeString('vi-VN')}`);
       }catch(err){
-        console.warn("Parse shared priceData:",err);
-        // Không quay về dữ liệu tích hợp vì sẽ tạo cảm giác sai rằng bảng giá file 2 vẫn còn.
-        initData([],"remote");
-        setConnection("offline","Lỗi đọc bảng giá Firebase");
+        remoteReadOK=false; initData([],"remote");
+        setConnection("offline","Lỗi đồng bộ giá: "+err.message);
       }
-    },err=>{
-      console.warn("Firebase read:",err);
-      // Khi mất kết nối, không nạp dữ liệu mẫu cũ. Nếu chưa từng nhận snapshot thì hiển thị trống.
-      if(!hasReceivedRemoteSnapshot) initData([],"remote");
-      setConnection("offline","Mất kết nối Firebase");
+    };
+    [[SHARED_PRICE_PATH,'prices'],['ckSavedDiscounts','discounts'],['appAccessConfig/ckMaxExtra','cap']].forEach(([path,key])=>{
+      db.ref(path).on('value',snap=>{syncState[key]=snap.val(); refresh();},err=>{
+        delete syncState[key]; remoteReadOK=false; initData([],"remote");
+        setConnection('offline','Chưa xác minh được giá / chiết khấu: '+err.message);
+      });
+    });
+    db.ref('.info/connected').on('value',snap=>{
+      if(!snap.val()) { remoteReadOK=false; setConnection('offline','Mất kết nối · giá chưa được xác minh lại'); }
+      else refresh();
     });
 
     db.ref(SETTINGS_PATH).on("value",snap=>{ if(snap.exists())applySettings(snap.val()); });
     updateAdminUI();
   }catch(err){
     console.warn(err);
-    initData(EMBEDDED_PRODUCTS,"local");
-    setConnection("offline","Dữ liệu tích hợp");
+    initData([],"local");
+    setConnection("offline","Chưa kết nối được bảng giá chuẩn");
   }
 }
 function firebaseKey(s){ return String(s||"SP").replace(/[.#$\[\]\/]/g,"_"); }
@@ -1275,7 +1316,7 @@ async function writeProducts(list,sourceLabel){
       data:productsToSharedMatrix(hydrated),
       importedAt:now,
       uploadId:"ideco_equote_"+now,
-      sourceType:"IDECO_BAO_GIA_DIEN_TU"
+      sourceType:"IDECO_BAO_GIA_DIEN_TU", discountUnit:"points"
     }],
     lastUpdated:new Date(now).toISOString()
   };
@@ -1318,20 +1359,7 @@ function lockAdmin(){
 
 /* Excel import */
 function nhead(s){ return normalizeText(s).replace(/[^\w\s]/g," ").replace(/\s+/g," ").trim(); }
-function colIndex(headers,variants){
-  const nh=headers.map(nhead);
-  for(const v of variants){
-    const nv=nhead(v);
-    let ix=nh.findIndex(h=>h===nv);
-    if(ix>=0)return ix;
-  }
-  for(const v of variants){
-    const nv=nhead(v);
-    let ix=nh.findIndex(h=>h.includes(nv)||nv.includes(h));
-    if(ix>=0)return ix;
-  }
-  return -1;
-}
+function colIndex(headers,variants){ const keys=variants.map(IdecoPrice.field); return headers.findIndex(h=>String(h??'').trim() && keys.includes(IdecoPrice.field(h))); }
 function parseNum(v){
   // Số thông thường / %: vẫn cho phép phần thập phân. KHÔNG dùng hàm này cho tiền VNĐ.
   if(typeof v==="number")return Number.isFinite(v)?v:0;
@@ -1352,40 +1380,8 @@ function parseNum(v){
 // QUAN TRỌNG: tiền VNĐ là số nguyên. Dấu chấm / dấu phẩy trong bảng giá là dấu phân cách hàng nghìn.
 // Ví dụ: 222,000 = 222000; 193.140 = 193140; 1.000.000 = 1000000.
 // Đồng thời vẫn chịu được chuỗi kiểu 222000.00 nếu nguồn nào đó xuất phần thập phân .00.
-function parseMoneyVND(v){
-  if(typeof v==="number") return Number.isFinite(v)?Math.round(v):0;
-  let s=String(v??"").replace(/[₫đĐ\s\u00A0]/g,"").trim();
-  if(!s) return 0;
-  const neg=s.startsWith("-");
-  s=s.replace(/-/g,"").replace(/[^\d.,]/g,"");
-  if(!s) return 0;
-
-  const dots=(s.match(/\./g)||[]).length;
-  const commas=(s.match(/,/g)||[]).length;
-  const lastDot=s.lastIndexOf("."), lastComma=s.lastIndexOf(",");
-  const lastSep=Math.max(lastDot,lastComma);
-  const fracLen=lastSep>=0 ? s.length-lastSep-1 : -1;
-
-  let normalized;
-  if(lastSep>=0 && fracLen===2){
-    // Chỉ coi 2 số cuối là phần thập phân khi phần trước KHÔNG có cấu trúc nghìn thuần túy.
-    // 222,000 có 3 số cuối => chắc chắn là 222000; 222000.00 => 222000.00.
-    const before=s.slice(0,lastSep).replace(/[.,]/g,"");
-    const sep=s[lastSep];
-    const sameCount=sep==="."?dots:commas;
-    if(sameCount===1 && before.length>=4){
-      normalized=before+"."+s.slice(lastSep+1);
-    }else{
-      normalized=s.replace(/[.,]/g,"");
-    }
-  }else{
-    // Giá VNĐ trong file IDECO: mọi dấu . hoặc , còn lại đều là phân cách hàng nghìn.
-    normalized=s.replace(/[.,]/g,"");
-  }
-  const n=Number(normalized);
-  return Number.isFinite(n)?Math.round(neg?-n:n):0;
-}
-function pct(v){ let n=parseNum(v); if(n>1)n=n/100; return n; }
+function parseMoneyVND(v){ const n=IdecoPrice.money(v); return Number.isFinite(n)?n:0; }
+function pct(v,unit='points'){ const n=IdecoPrice.percent(v,unit); return Number.isFinite(n)?n/100:0; }
 function verifyMoneyParser(){
   const tests=[["222,000",222000],["193.140",193140],["1.000.000",1000000],["113,400",113400],["156000",156000],[222000,222000],["222000.00",222000]];
   const bad=tests.filter(([raw,expect])=>parseMoneyVND(raw)!==expect);
@@ -1393,7 +1389,8 @@ function verifyMoneyParser(){
   else console.info("[IDECO] Bộ đọc giá VNĐ OK: 222,000 → 222000; 193.140 → 193140");
 }
 verifyMoneyParser();
-function parseExcelRows(matrix){
+function parseExcelRows(matrix,unit="points"){
+  if(!matrix || !matrix.length) return [];
   const scan=matrix.slice(0,12);
   let best=0,bestScore=-1;
   scan.forEach((r,i)=>{
@@ -1425,7 +1422,7 @@ function parseExcelRows(matrix){
   const get=(r,k)=>idx[k]>=0?r[idx[k]]:"";
   return matrix.slice(best+1).filter(r=>String(get(r,"name")||"").trim()).map((r,i)=>({
     stt:Math.round(parseNum(get(r,"stt"))||i+1),
-    code:String(get(r,"code")||("SP_"+(i+1))).trim(),
+    code:String(get(r,"code")||"").trim(),
     name:String(get(r,"name")||"").trim(),
     active:String(get(r,"active")||"").trim(),
     strength:String(get(r,"strength")||"").trim(),
@@ -1434,11 +1431,13 @@ function parseExcelRows(matrix){
     manufacturer:String(get(r,"manufacturer")||"").trim(),
     origin:String(get(r,"origin")||"").trim(),
     price:parseMoneyVND(get(r,"price")),
-    discount6:pct(get(r,"discount6")),
+    discount6:pct(get(r,"discount6"),unit),
     price6:parseMoneyVND(get(r,"price6")),
-    discount12:pct(get(r,"discount12")),
+    discount12:pct(get(r,"discount12"),unit),
     price12:parseMoneyVND(get(r,"price12")),
     category:String(get(r,"category")||"Khác").trim(),
+    _hasCk6:idx.discount6>=0 && String(get(r,"discount6")??"").trim()!=="",
+    _hasCk12:idx.discount12>=0 && String(get(r,"discount12")??"").trim()!=="",
     updated:String(get(r,"updated")||"").trim().toUpperCase()==="A"
   }));
 }
@@ -1447,7 +1446,7 @@ async function handleExcel(file){
   const buf=await file.arrayBuffer();
   const book=XLSX.read(buf,{type:"array"});
   const ws=book.Sheets[book.SheetNames[0]];
-  const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:true});
+  const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});
   pendingImport=parseExcelRows(matrix);
   pendingImportFileName=file.name||"bang-gia.xlsx";
   const cats=new Set(pendingImport.map(p=>p.category));
@@ -1640,7 +1639,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelect
 
 applySettings(DEFAULT_SETTINGS);
 updateCartCount();
-initData(EMBEDDED_PRODUCTS,"local");
+initData([],"local");
 initFirebase();
 updateAdminUI();
 </script>
