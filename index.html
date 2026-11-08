@@ -384,10 +384,40 @@ a{color:inherit}
   .detail-list,.detail-discounts,.form-grid{grid-template-columns:1fr}
   .field.full{grid-column:auto}
 }
-.bulk-cart-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px}
-.bulk-cart-actions small{color:var(--muted);font-size:12px;line-height:1.5}
-#addAllToCartBtn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
-@media(max-width:600px){#addAllToCartBtn{width:100%;min-height:46px}.bulk-cart-actions small{width:100%}}
+.brand-mini img{flex:none}
+.brand-mini > div{min-width:0}
+.brand-mini strong{overflow:hidden;text-overflow:ellipsis}
+.top-actions{flex:none}
+.export-top{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;white-space:nowrap;font-size:12px}
+.quote-count{background:rgba(0,0,0,.15);border-radius:999px;padding:3px 6px;font-variant-numeric:tabular-nums}
+.reset-selection{width:44px;height:44px;font-size:24px;color:#344054}
+.catalog-actions{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:0 0 16px}
+.catalog-actions small{flex-basis:100%;color:var(--muted);font-size:12px;line-height:1.5}
+#selectAllBtn:disabled{transform:none;box-shadow:none}
+#catalogSection{scroll-margin-top:136px}
+[data-quote-card]{cursor:pointer}
+[data-quote-card].is-selected{border-color:#18865d;box-shadow:0 0 0 1px #18865d,0 10px 24px rgba(8,122,85,.09)}
+.card-tools{display:flex;align-items:center;gap:6px;flex:none;position:relative;z-index:2}
+.card-actions{grid-template-columns:1fr}
+.quote-select{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:40px;
+  padding:5px 9px;border:1px solid #d0d5dd;border-radius:11px;background:#fff;
+  color:#344054;font-size:11px;font-weight:800;white-space:nowrap
+}
+.quote-select[aria-pressed="true"]{background:#087a55;border-color:#087a55;color:#fff}
+.quote-select:focus-visible,.reset-selection:focus-visible,.export-top:focus-visible{outline:3px solid #1679cf;outline-offset:2px}
+@media(max-width:720px){
+  .topbar-inner{gap:6px;padding-inline:8px}
+  .brand-mini{gap:4px}
+  .brand-mini img{width:30px;height:30px}
+  .brand-mini strong{font-size:11px}
+  .top-actions{gap:5px}
+  .top-actions .connection{padding:0;width:12px;justify-content:center;gap:0;font-size:0}
+  .top-actions .connection::before{flex:none}
+  .top-actions .admin-desktop{width:36px}
+  .export-top{gap:4px;padding-inline:7px;font-size:10px}
+  .search-wrap{top:60px}
+}
 </style>
 </head>
 <body>
@@ -401,7 +431,11 @@ a{color:inherit}
       <div class="top-actions">
         <span id="connectionBadge" class="connection">Đang kết nối</span>
         <button class="icon-btn admin-desktop" id="adminBtn" title="Quản trị">⚙️</button>
-        <button class="icon-btn" id="cartTopBtn" title="Giỏ báo giá">🛒</button>
+        <button type="button" class="icon-btn reset-selection" id="resetSelectionBtn" title="Làm lại · Bỏ tất cả lựa chọn" aria-label="Làm lại, bỏ tất cả lựa chọn" disabled>↻</button>
+        <button type="button" class="primary-btn export-top" id="exportTopBtn" disabled>
+          <span id="exportTopLabel">XUẤT BÁO GIÁ EXCEL</span>
+          <span id="topQuoteCount" class="quote-count" aria-live="polite">0</span>
+        </button>
       </div>
     </div>
   </header>
@@ -411,7 +445,7 @@ a{color:inherit}
       <div class="hero-copy">
         <span class="hero-kicker">💊 CATALOGUE &amp; BÁO GIÁ ĐIỆN TỬ PHÂN PHỐI</span>
         <h1 id="heroTitle">BẢNG BÁO GIÁ THUỐC OTC- ETC</h1>
-        <div class="hero-sub" id="heroSubtitle">Tìm nhanh tên thuốc và nhóm điều trị mong muốn hợp tác với hơn 700 sản phẩm - Tiện lợi - dễ dàng trên Mobile - Chọn sản phẩm hợp tác - vào giỏ hàng xuất Excel báo giá. Cám ơn Anh/ Chị Khách hàng hợp tác !</div>
+        <div class="hero-sub" id="heroSubtitle">Tìm thuốc theo tên hoặc nhóm điều trị. Chạm vào từng thẻ hoặc chọn tất cả kết quả lọc, rồi bấm Xuất báo giá Excel ở thanh trên cùng.</div>
         <div class="hero-stats">
           <div class="stat-pill"><b id="statProducts">0</b><small>Sản phẩm</small></div>
           <div class="stat-pill"><b id="statCategories">0</b><small>Nhóm điều trị</small></div>
@@ -472,9 +506,10 @@ a{color:inherit}
           <option value="discount">Chiết khấu cao nhất</option>
         </select>
       </div>
-      <div class="bulk-cart-actions">
-        <button type="button" id="addAllToCartBtn" class="primary-btn" disabled aria-describedby="bulkCartHint">🛒 Chọn tất cả vào giỏ (0 sản phẩm)</button>
-        <small id="bulkCartHint">Chọn toàn bộ kết quả lọc, kể cả sản phẩm chưa cuộn tới. Sản phẩm mới: 1 hộp; sản phẩm đã có trong giỏ giữ nguyên số lượng.</small>
+      <div class="catalog-actions">
+        <button type="button" id="selectAllBtn" class="primary-btn" disabled aria-describedby="selectionHint">Chọn tất cả kết quả (0)</button>
+        <button type="button" class="outline-btn" data-open-quote>Xem danh sách đã chọn</button>
+        <small id="selectionHint">Chạm thẻ để chọn hoặc bỏ chọn. Chọn tất cả áp dụng cho toàn bộ kết quả lọc, kể cả sản phẩm chưa cuộn tới.</small>
       </div>
       <div id="productGrid" class="product-grid"></div>
       <div id="emptyState" class="empty hidden"><div class="big">🔍</div><b>Chưa tìm thấy sản phẩm phù hợp</b><div>Thử tên hoạt chất, công dụng hoặc bỏ bớt bộ lọc.</div></div>
@@ -493,7 +528,7 @@ a{color:inherit}
     <button class="nav-btn active" data-nav="home"><span>⌂</span>Trang chủ</button>
     <button class="nav-btn" data-nav="search"><span>⌕</span>Tìm thuốc</button>
     <button class="nav-btn" data-nav="fav"><span>♡</span>Quan tâm</button>
-    <button class="nav-btn" data-nav="cart"><span>🛒</span>Báo giá<i id="bottomCartCount" class="cart-count hidden">0</i></button>
+    <button class="nav-btn" data-nav="cart"><span>▤</span>Báo giá<i id="bottomCartCount" class="cart-count hidden">0</i></button>
   </div>
 </nav>
 
@@ -527,9 +562,9 @@ a{color:inherit}
 <!-- Cart -->
 <div id="cartOverlay" class="overlay hidden">
   <div class="modal">
-    <div class="modal-head"><h3>🛒 Danh sách yêu cầu báo giá</h3><button class="close-btn" data-close="cartOverlay">✕</button></div>
+    <div class="modal-head"><h3>Danh sách yêu cầu báo giá</h3><button class="close-btn" data-close="cartOverlay">✕</button></div>
     <div class="modal-body">
-      <div class="admin-status" style="margin-bottom:10px"><b>“Thêm báo giá”</b> dùng để gom các thuốc khách đang quan tâm vào một danh sách. Sau khi chọn xong có thể <b>gửi Zalo, gửi Email hoặc sao chép nội dung</b>.</div>
+      <div class="admin-status" style="margin-bottom:10px">Chỉnh số lượng nếu cần gửi yêu cầu qua Zalo hoặc email. Tệp Excel liệt kê các mức giá và chiết khấu của toàn bộ sản phẩm đã chọn.</div>
       <div id="cartBody"></div>
     </div>
   </div>
@@ -655,7 +690,7 @@ const ADMIN_PASS_HASH = "b8a57977041c2b2ba8baab472c1f0240a30b671a9fb027f9e4d73b5
 const DEFAULT_SETTINGS = {
   company: "CÔNG TY TNHH TM - DV KẾT GIAO PHÁT TRIỂN QUỐC TẾ (IDECO)",
   title: "BẢNG BÁO GIÁ THUỐC OTC- ETC",
-  subtitle: "Tìm nhanh tên thuốc và nhóm điều trị mong muốn hợp tác với hơn 700 sản phẩm - Tiện lợi - dễ dàng trên Mobile - Chọn sản phẩm hợp tác - vào giỏ hàng xuất Excel báo giá. Cám ơn Anh/ Chị Khách hàng hợp tác !",
+  subtitle: "Tìm thuốc theo tên hoặc nhóm điều trị. Chạm vào từng thẻ hoặc chọn tất cả kết quả lọc, rồi bấm Xuất báo giá Excel ở thanh trên cùng.",
   hotline: "",
   orderEmail: "",
   address: "003 Carillon 5, 262/3 Lũy Bán Bích, P. Tân Phú, TP. Hồ Chí Minh",
@@ -688,7 +723,8 @@ const LS_RECENT = "ideco_price_recent_v1";
 const LS_CART = "ideco_price_cart_v1";
 let favorites = new Set(safeJSON(localStorage.getItem(LS_FAV), []));
 let recent = safeJSON(localStorage.getItem(LS_RECENT), []);
-let cart = safeJSON(localStorage.getItem(LS_CART), {});
+const cart = Object.assign(Object.create(null), safeJSON(localStorage.getItem(LS_CART), {}));
+let exportingQuote = false;
 
 function $(id){ return document.getElementById(id); }
 function safeJSON(str, fallback){ try{return str?JSON.parse(str):fallback}catch{return fallback} }
@@ -747,10 +783,7 @@ function initData(list, source="local"){
     Object.keys(cart||{}).forEach(code=>{
       if(!validCodes.has(String(code))){ delete cart[code]; cartChanged=true; }
     });
-    if(cartChanged){
-      localStorage.setItem(LS_CART,JSON.stringify(cart));
-      updateCartCount();
-    }
+    if(cartChanged) persistCart();
     if(selectedCategory!=="Tất cả" && !products.some(p=>p.category===selectedCategory)) selectedCategory="Tất cả";
   }
 
@@ -759,6 +792,7 @@ function initData(list, source="local"){
   renderFeatured();
   renderRecent();
   applyFilters();
+  updateCartCount();
   $("embeddedCount").textContent=EMBEDDED_PRODUCTS.length;
   if(source==="remote") setConnection("online","Firebase realtime");
 }
@@ -779,8 +813,11 @@ function renderCategories(){
   $("filterCategories").innerHTML=arr.map(([c,n])=>`<button class="filter-option ${selectedCategory===c?"active":""}" data-filter-cat="${esc(c)}">${esc(c)} (${n})</button>`).join("");
 }
 function miniCard(p){
-  return `<article class="feature-card">
-    <span class="tag new">${p.updated?"✨ VỪA CẬP NHẬT":"💊 IDECO"}</span>
+  return `<article class="feature-card${cart[p.code]>0?" is-selected":""}" data-quote-card="${esc(p.code)}">
+    <div class="card-top">
+      <span class="tag new">${p.updated?"✨ VỪA CẬP NHẬT":"💊 IDECO"}</span>
+      <div class="card-tools">${quoteSelectButton(p)}</div>
+    </div>
     <h3>${esc(p.name)}</h3>
     <div class="active-line">${esc(p.active)}${p.strength?" · "+esc(p.strength):""}</div>
     <div class="feature-price">${formatMoney(p.price)}</div>
@@ -823,7 +860,7 @@ function applyFilters(){
   $("resultCount").textContent=filtered.length.toLocaleString("vi-VN");
   $("filterPreviewCount").textContent=filtered.length.toLocaleString("vi-VN");
   updateFilterUI();
-  updateBulkCartButton();
+  updateSelectAllButton();
   renderProducts();
 }
 function updateFilterUI(){
@@ -833,15 +870,22 @@ function updateFilterUI(){
   $("filterFavorites").classList.toggle("active",onlyFavorites);
   $("filterHighDiscount").classList.toggle("active",highDiscount);
 }
+function quoteSelectButton(p){
+  const selected=cart[p.code]>0;
+  return `<button type="button" class="quote-select" data-quote-toggle="${esc(p.code)}" aria-label="Chọn báo giá cho ${esc(p.name)}" aria-pressed="${selected}">${selected?"✓ Đã chọn":"＋ Chọn"}</button>`;
+}
 function productCard(p){
   const fav=favorites.has(p.code);
-  return `<article class="product-card">
+  return `<article class="product-card${cart[p.code]>0?" is-selected":""}" data-quote-card="${esc(p.code)}">
     <div class="card-top">
       <div class="badges">
         ${p.updated?'<span class="tag new">✨ Cập nhật</span>':""}
         <span class="tag category">${esc(p.category)}</span>
       </div>
-      <button class="fav-btn ${fav?"active":""}" data-fav="${esc(p.code)}" title="Quan tâm">${fav?"♥":"♡"}</button>
+      <div class="card-tools">
+        ${quoteSelectButton(p)}
+        <button class="fav-btn ${fav?"active":""}" data-fav="${esc(p.code)}" title="Quan tâm">${fav?"♥":"♡"}</button>
+      </div>
     </div>
     <h3>${esc(p.name)}</h3>
     <div class="ingredient">${esc(p.active)}${p.strength?" · "+esc(p.strength):""}</div>
@@ -863,7 +907,6 @@ function productCard(p){
     </div>
     <div class="card-actions">
       <button class="soft-btn" data-detail="${esc(p.code)}">Chi tiết</button>
-      <button class="primary-btn" data-add="${esc(p.code)}">🛒 Thêm báo giá</button>
     </div>
   </article>`;
 }
@@ -912,8 +955,8 @@ function openDetail(code){
     </div>
     <div class="detail-use"><b>Công dụng chính</b><br>${esc(p.use)}</div>
     <div class="qty-row">
-      <input id="detailQty" class="qty-input" type="number" min="1" value="${cart[p.code]||1}">
-      <button class="primary-btn" style="flex:1" data-add-detail="${esc(p.code)}">Thêm vào yêu cầu báo giá</button>
+      <input id="detailQty" class="qty-input" type="number" min="1" aria-label="Số lượng hộp" value="${cart[p.code]||1}">
+      <button class="primary-btn" style="flex:1" data-add-detail="${esc(p.code)}">${cart[p.code]>0?"Cập nhật số lượng":"Chọn báo giá"}</button>
     </div>`;
   openOverlay("detailOverlay");
 }
@@ -922,40 +965,58 @@ function toggleFav(code){
   localStorage.setItem(LS_FAV,JSON.stringify([...favorites]));
   applyFilters(); renderRecent();
 }
-function addToCart(code,qty=1){
-  qty=Math.max(1,parseInt(qty||1,10));
-  cart[code]=(cart[code]||0)+qty;
-  localStorage.setItem(LS_CART,JSON.stringify(cart));
-  updateCartCount(); showToast("Đã thêm vào yêu cầu báo giá");
-}
-function updateBulkCartButton(){
-  const button=$("addAllToCartBtn");
-  button.disabled=filtered.length===0;
-  button.textContent=`🛒 Chọn tất cả vào giỏ (${filtered.length.toLocaleString("vi-VN")} sản phẩm)`;
-}
-function addAllFilteredToCart(){
-  if(!filtered.length){showToast("Chưa có sản phẩm phù hợp để thêm vào giỏ.");return;}
-  const nextCart={...cart};
-  let added=0;
-  filtered.forEach(p=>{
-    if(!(Number(nextCart[p.code])>0)){nextCart[p.code]=1;added++;}
-  });
-  if(!added){showToast("Tất cả sản phẩm trong kết quả lọc đã có trong giỏ.");return;}
+function persistCart(){
   try{
-    localStorage.setItem(LS_CART,JSON.stringify(nextCart));
+    if(Object.keys(cart).length) localStorage.setItem(LS_CART,JSON.stringify(cart));
+    else localStorage.removeItem(LS_CART);
   }catch(err){
-    showToast("Không lưu được giỏ hàng. Vui lòng kiểm tra bộ nhớ trình duyệt và thử lại.");return;
+    console.warn("Không lưu được lựa chọn báo giá:",err);
   }
-  cart=nextCart;
+}
+function updateSelectAllButton(){
+  const button=$("selectAllBtn");
+  const allSelected=filtered.length>0 && filtered.every(p=>cart[p.code]>0);
+  button.disabled=!filtered.length || allSelected;
+  const count=filtered.length.toLocaleString("vi-VN");
+  button.textContent=allSelected?`✓ Đã chọn tất cả kết quả (${count})`:`Chọn tất cả kết quả (${count})`;
+}
+function updateSelection(){
+  persistCart();
   updateCartCount();
-  renderCart();
-  showToast(`Đã thêm ${added} sản phẩm vào giỏ. Có thể mở Giỏ báo giá để chỉnh số lượng.`);
+  updateSelectAllButton();
+  document.querySelectorAll("[data-quote-toggle]").forEach(button=>{
+    const selected=cart[button.dataset.quoteToggle]>0;
+    if(button.getAttribute("aria-pressed")===String(selected)) return;
+    button.closest("[data-quote-card]").classList.toggle("is-selected",selected);
+    button.setAttribute("aria-pressed",String(selected));
+    button.textContent=selected?"✓ Đã chọn":"＋ Chọn";
+  });
+  if(!$("cartOverlay").classList.contains("hidden")) renderCart();
+}
+function selectAllFiltered(){
+  let added=0;
+  for(const p of filtered){
+    if(cart[p.code]>0) continue;
+    cart[p.code]=1;
+    added++;
+  }
+  if(!added) return;
+  updateSelection();
+  showToast(`Đã chọn thêm ${added.toLocaleString("vi-VN")} sản phẩm.`);
+}
+function clearSelection(){
+  Object.keys(cart).forEach(code=>delete cart[code]);
+  updateSelection();
+  showToast("Đã bỏ chọn tất cả sản phẩm.");
 }
 function setCartQty(code,qty){
-  qty=parseInt(qty||0,10);
+  qty=parseInt(qty,10);
+  if(!Number.isFinite(qty)){
+    renderCart();
+    return;
+  }
   if(qty<=0) delete cart[code]; else cart[code]=qty;
-  localStorage.setItem(LS_CART,JSON.stringify(cart));
-  updateCartCount(); renderCart();
+  updateSelection();
 }
 function unitPriceFor(p,qty){
   if(qty>=12 && p.price12>0)return p.price12;
@@ -966,15 +1027,23 @@ function cartRows(){
   return Object.entries(cart).map(([code,qty])=>({p:productByCode(code),qty:Number(qty||0)})).filter(x=>x.p&&x.qty>0);
 }
 function updateCartCount(){
-  const count=Object.values(cart).reduce((a,b)=>a+Number(b||0),0);
-  $("bottomCartCount").textContent=count;
+  const count=Object.values(cart).filter(qty=>Number(qty)>0).length;
+  const label=count.toLocaleString("vi-VN");
+  $("bottomCartCount").textContent=label;
   $("bottomCartCount").classList.toggle("hidden",count===0);
-  $("cartTopBtn").textContent=count?`🛒 ${count}`:"🛒";
+  $("topQuoteCount").textContent=label;
+  $("topQuoteCount").setAttribute("aria-label",`${label} sản phẩm đã chọn`);
+  $("exportTopBtn").disabled=exportingQuote || count===0 || products.length===0;
+  $("exportTopBtn").setAttribute("aria-busy",String(exportingQuote));
+  $("exportTopLabel").textContent=exportingQuote?"ĐANG TẠO EXCEL…":"XUẤT BÁO GIÁ EXCEL";
+  $("resetSelectionBtn").disabled=count===0;
+  const summaryExport=$("exportQuoteExcelBtn");
+  if(summaryExport) summaryExport.disabled=exportingQuote;
 }
 function renderCart(){
   const rows=cartRows();
   if(!rows.length){
-    $("cartBody").innerHTML='<div class="empty"><div class="big">🛒</div><b>Chưa chọn sản phẩm</b><div>Chạm “🛒 Thêm báo giá” ở thuốc cần quan tâm.</div></div>';
+    $("cartBody").innerHTML='<div class="empty"><div class="big">📋</div><b>Chưa chọn sản phẩm</b><div>Chạm vào thẻ sản phẩm hoặc bấm Chọn tất cả kết quả.</div></div>';
     return;
   }
   let base=0,total=0;
@@ -1002,9 +1071,9 @@ function renderCart(){
     <div class="action-row">
       <button class="primary-btn" id="shareCartBtn">📤 Chia sẻ / gửi Zalo</button>
       <button class="primary-btn" id="emailCartBtn">✉️ Gửi Email</button>
-      <button class="primary-btn" id="exportQuoteExcelBtn">📊 Xuất Excel báo giá</button>
+      <button class="primary-btn" id="exportQuoteExcelBtn" ${exportingQuote?"disabled":""}>Xuất báo giá Excel</button>
       <button class="outline-btn" id="copyCartBtn">Sao chép nội dung</button>
-      <button class="danger-btn" id="clearCartBtn">Xóa giỏ</button>
+      <button class="danger-btn" id="clearCartBtn">Bỏ tất cả lựa chọn</button>
     </div>`;
 }
 function cartText(){
@@ -1025,16 +1094,32 @@ async function shareCart(){
 }
 
 async function exportQuoteExcel(){
+  if(exportingQuote) return;
   const rows=cartRows();
-  if(!rows.length){ showToast("Giỏ báo giá đang trống."); return; }
-  if(!window.ExcelJS){ showToast("Chưa tải được thư viện xuất Excel."); return; }
+  if(!rows.length){showToast("Anh/chị hãy chọn sản phẩm cần báo giá.");return;}
+  if(!window.ExcelJS){showToast("Chưa tải được bộ xuất Excel. Vui lòng tải lại trang và thử lại.");return;}
 
+  exportingQuote=true;
+  updateCartCount();
+  try{
+    await downloadQuoteWorkbook(rows);
+    showToast(`Đã xuất Excel cho ${rows.length.toLocaleString("vi-VN")} sản phẩm.`);
+  }catch(err){
+    console.error(err);
+    showToast("Không xuất được Excel: "+(err.message||err));
+  }finally{
+    exportingQuote=false;
+    updateCartCount();
+  }
+}
+
+async function downloadQuoteWorkbook(rows){
   const wb=new ExcelJS.Workbook();
-  wb.creator="IDECO";
+  wb.creator=settings.company||DEFAULT_SETTINGS.company;
   wb.created=new Date();
   const ws=wb.addWorksheet("BÁO GIÁ THUỐC",{
-    pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:.25,right:.25,top:.35,bottom:.35,header:.2,footer:.2}},
-    views:[{showGridLines:false,state:"frozen",ySplit:10}]
+    pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"9:9",margins:{left:.25,right:.25,top:.35,bottom:.35,header:.2,footer:.2}},
+    views:[{showGridLines:false,state:"frozen",ySplit:9}]
   });
   const RED="FFEF3323", REDD="FFB91F16", NAVY="FF14213D", WHITE="FFFFFFFF", LIGHT="FFFFF3F1", GREEN="FF087A55", LINE="FFD9DEE8", MUTED="FF667085";
   const thin={style:"thin",color:{argb:LINE}};
@@ -1053,11 +1138,13 @@ async function exportQuoteExcel(){
 
   // Logo IDECO lấy trực tiếp từ logo đang nhúng trong file HTML.
   try{
-    const logo=document.querySelector(".brand-mini img")?.src || document.querySelector(".hero-logo img")?.src;
-    if(logo && logo.startsWith("data:image/")){
-      const ext=logo.includes("image/jpeg")?"jpeg":"png";
-      const imgId=wb.addImage({base64:logo,extension:ext});
-      ws.addImage(imgId,{tl:{col:.15,row:.15},ext:{width:105,height:76}});
+    const logo=document.querySelector(".brand-mini img");
+    if(logo?.src.startsWith("data:image/")){
+      const extension=logo.src.includes("image/jpeg")?"jpeg":"png";
+      const imgId=wb.addImage({base64:logo.src,extension});
+      const ratio=logo.naturalWidth && logo.naturalHeight?logo.naturalWidth/logo.naturalHeight:1;
+      const height=Math.min(74,105/ratio);
+      ws.addImage(imgId,{tl:{col:.3,row:.12},ext:{width:height*ratio,height}});
     }
   }catch(e){ console.warn("Logo Excel:",e); }
 
@@ -1070,15 +1157,15 @@ async function exportQuoteExcel(){
   ws.getCell("C3").value=contact||"BÁO GIÁ ĐIỆN TỬ IDECO"; ws.getCell("C3").font={name:"Arial",size:10,color:{argb:MUTED}}; ws.getCell("C3").alignment={horizontal:"center",vertical:"middle"};
 
   for(let c=1;c<=9;c++) ws.getCell(4,c).border={bottom:{style:"medium",color:{argb:RED}}}; ws.getRow(4).height=8;
-  ws.mergeCells("A5:I5"); ws.getCell("A5").value="BÁO GIÁ THUỐC"; ws.getCell("A5").font={name:"Arial",size:20,bold:true,color:{argb:REDD}}; ws.getCell("A5").alignment={horizontal:"center",vertical:"middle"}; ws.getRow(5).height=32;
+  ws.mergeCells("A5:I5"); ws.getCell("A5").value=settings.title||DEFAULT_SETTINGS.title; ws.getCell("A5").font={name:"Arial",size:20,bold:true,color:{argb:REDD}}; ws.getCell("A5").alignment={horizontal:"center",vertical:"middle",wrapText:true}; ws.getRow(5).height=32+24*(ws.getCell("A5").value.split("\n").length-1);
   const now=new Date();
   ws.mergeCells("A6:E6"); ws.getCell("A6").value="Kính gửi: Quý khách hàng"; ws.getCell("A6").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
   ws.mergeCells("F6:I6"); ws.getCell("F6").value=`Ngày ${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`; ws.getCell("F6").alignment={horizontal:"right"}; ws.getCell("F6").font={name:"Arial",size:10,italic:true,color:{argb:MUTED}};
-  ws.mergeCells("A7:I7"); ws.getCell("A7").value="IDECO trân trọng gửi đến Quý khách bảng giá theo đúng các mức số lượng đang hiển thị trên hệ thống:"; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
+  ws.mergeCells("A7:I7"); ws.getCell("A7").value="IDECO trân trọng gửi Quý khách bảng giá theo từng mức số lượng. Đơn vị tiền tệ: VNĐ."; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
 
   // Tiêu đề bảng: giữ nguyên từng mức giá/chiết khấu của dữ liệu gốc, không tính lại theo số lượng giỏ hàng.
   const hr=9;
-  const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH","ĐƠN GIÁ","MUA TRÊN 6 HỘP","CHIẾT KHẤU","MUA TRÊN 12 HỘP","CHIẾT KHẤU"];
+  const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH","ĐƠN GIÁ","GIÁ TỪ 6 HỘP","CHIẾT KHẤU","GIÁ TỪ 12 HỘP","CHIẾT KHẤU"];
   ws.getRow(hr).values=headers; ws.getRow(hr).height=38;
   headers.forEach((_,i)=>{
     const c=ws.getCell(hr,i+1);
@@ -1120,7 +1207,7 @@ async function exportQuoteExcel(){
 
   let r=hr+rows.length+2;
   ws.mergeCells(r,1,r,9);
-  ws.getCell(r,1).value="Chính sách giá: Đơn giá, giá mua trên 6 hộp và giá mua trên 12 hộp được lấy trực tiếp từ dữ liệu bảng giá đang đồng bộ trên hệ thống IDECO. Hai cột chiết khấu hiển thị đúng tỷ lệ tương ứng của từng mức.";
+  ws.getCell(r,1).value="Chính sách giá: Đơn giá, giá mua từ 6 hộp và giá mua từ 12 hộp được lấy trực tiếp từ dữ liệu bảng giá đang đồng bộ trên hệ thống IDECO. Hai cột chiết khấu hiển thị đúng tỷ lệ tương ứng của từng mức.";
   ws.getCell(r,1).font={name:"Arial",size:9,italic:true,color:{argb:MUTED}};
   ws.getCell(r,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}};
   ws.getCell(r,1).border=border;
@@ -1139,10 +1226,10 @@ async function exportQuoteExcel(){
   ws.headerFooter.oddFooter="&CTrang &P / &N";
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  const downloadUrl=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=downloadUrl;
   const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
-  a.download=`BAO_GIA_THUOC_IDECO_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1200);
-  showToast("Đã xuất Excel đúng các mức giá 6 hộp / 12 hộp.");
+  a.download=`BAO_GIA_THUOC_IDECO_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
 }
 
 function suggestions(){
@@ -1157,7 +1244,7 @@ function suggestions(){
 function openOverlay(id){ $(id).classList.remove("hidden"); document.body.style.overflow="hidden"; }
 function closeOverlay(id){ $(id).classList.add("hidden"); document.body.style.overflow=""; }
 function setConnection(mode,text){
-  const b=$("connectionBadge"); b.className="connection "+mode; b.textContent=text;
+  const b=$("connectionBadge"); b.className="connection "+mode; b.textContent=text; b.title=text;
 }
 
 function applySettings(s){
@@ -1171,6 +1258,7 @@ function applySettings(s){
   const oldSubtitle="Tìm nhanh theo tên thuốc, hoạt chất, công dụng hoặc nhóm điều trị. Giá và mức chiết khấu được trình bày rõ ràng trên mọi thiết bị.";
   if(!incoming.title || oldTitles.includes(String(incoming.title))) incoming.title=DEFAULT_SETTINGS.title;
   if(!incoming.subtitle || String(incoming.subtitle).trim()===oldSubtitle) incoming.subtitle=DEFAULT_SETTINGS.subtitle;
+  else incoming.subtitle=String(incoming.subtitle).replace(/vào giỏ hàng xuất Excel báo giá/gi,"bấm Xuất báo giá Excel ở thanh trên cùng");
   settings={...DEFAULT_SETTINGS,...incoming};
   $("miniCompany").textContent=settings.company;
   $("footerCompany").textContent=settings.company;
@@ -1575,15 +1663,22 @@ function sendEmailCart(){
 /* Events */
 document.addEventListener("click",e=>{
   const t=e.target.closest("button");
+  const card=e.target.closest("[data-quote-card]");
+  if(card && (!e.target.closest("button, a, input, select, textarea") || t?.hasAttribute("data-quote-toggle"))){
+    const code=card.dataset.quoteCard;
+    setCartQty(code,cart[code]>0?0:1);
+    return;
+  }
   if(!t)return;
   if(t.dataset.close) closeOverlay(t.dataset.close);
   if(t.dataset.detail) openDetail(t.dataset.detail);
   if(t.dataset.fav) toggleFav(t.dataset.fav);
-  if(t.dataset.add) addToCart(t.dataset.add,1);
   if(t.dataset.addDetail){
-    const q=$("detailQty")?.value||1;
-    addToCart(t.dataset.addDetail,q); closeOverlay("detailOverlay");
+    const qty=Math.max(1,parseInt($("detailQty").value,10)||1);
+    setCartQty(t.dataset.addDetail,qty);
+    closeOverlay("detailOverlay");
   }
+  if(t.hasAttribute("data-open-quote")){renderCart();openOverlay("cartOverlay");}
   if(t.dataset.cat!==undefined){selectedCategory=t.dataset.cat;applyFilters();$("catalogSection").scrollIntoView({behavior:"smooth",block:"start"});}
   if(t.dataset.filterCat!==undefined){selectedCategory=t.dataset.filterCat;updateFilterUI();$("filterPreviewCount").textContent=currentFilter().length.toLocaleString("vi-VN");}
   if(t.dataset.suggest){openDetail(t.dataset.suggest);$("suggestions").classList.add("hidden");}
@@ -1608,7 +1703,8 @@ $("searchInput").addEventListener("input",e=>{
 });
 $("searchInput").addEventListener("focus",suggestions);
 $("clearSearch").onclick=()=>{searchText="";$("searchInput").value="";$("clearSearch").classList.add("hidden");$("suggestions").classList.add("hidden");applyFilters();$("searchInput").focus()};
-$("addAllToCartBtn").onclick=addAllFilteredToCart;
+$("selectAllBtn").onclick=selectAllFiltered;
+$("resetSelectionBtn").onclick=clearSelection;
 $("sortSelect").onchange=e=>{sortMode=e.target.value;applyFilters()};
 $("filterBtn").onclick=()=>{updateFilterUI();$("filterPreviewCount").textContent=currentFilter().length.toLocaleString("vi-VN");openOverlay("filterOverlay")};
 $("filterUpdated").onclick=()=>{onlyUpdated=!onlyUpdated;updateFilterUI();$("filterPreviewCount").textContent=currentFilter().length.toLocaleString("vi-VN")};
@@ -1618,7 +1714,7 @@ $("resetFilterBtn").onclick=()=>{selectedCategory="Tất cả";onlyUpdated=onlyF
 $("applyFilterBtn").onclick=()=>{applyFilters();closeOverlay("filterOverlay");$("catalogSection").scrollIntoView({behavior:"smooth"})};
 $("viewUpdatedBtn").onclick=()=>{onlyUpdated=true;applyFilters();$("catalogSection").scrollIntoView({behavior:"smooth"})};
 $("clearRecentBtn").onclick=()=>{recent=[];localStorage.removeItem(LS_RECENT);renderRecent()};
-$("cartTopBtn").onclick=()=>{renderCart();openOverlay("cartOverlay")};
+$("exportTopBtn").onclick=exportQuoteExcel;
 $("adminBtn").onclick=()=>{updateAdminUI();openOverlay("adminOverlay")};
 $("excelFile").addEventListener("change",async e=>{try{if(e.target.files[0])await handleExcel(e.target.files[0])}catch(err){$("importStatus").className="admin-status warn";$("importStatus").textContent=err.message}});
 $("adminUnlockBtn").onclick=async()=>{
@@ -1664,14 +1760,13 @@ document.addEventListener("change",e=>{
 document.addEventListener("click",e=>{
   if(e.target.id==="shareCartBtn")shareCart();
   if(e.target.id==="emailCartBtn")sendEmailCart();
-  if(e.target.id==="exportQuoteExcelBtn")exportQuoteExcel().catch(err=>{console.error(err);showToast("Không xuất được Excel: "+(err.message||err));});
+  if(e.target.id==="exportQuoteExcelBtn")exportQuoteExcel();
   if(e.target.id==="copyCartBtn")navigator.clipboard.writeText(cartText()).then(()=>showToast("Đã sao chép nội dung báo giá"));
-  if(e.target.id==="clearCartBtn"){if(confirm("Xóa toàn bộ sản phẩm đã chọn?")){cart={};localStorage.setItem(LS_CART,"{}");updateCartCount();renderCart()}}
+  if(e.target.id==="clearCartBtn")clearSelection();
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelectorAll(".overlay:not(.hidden)").forEach(o=>closeOverlay(o.id))});
 
 applySettings(DEFAULT_SETTINGS);
-updateCartCount();
 initData([],"local");
 initFirebase();
 updateAdminUI();
