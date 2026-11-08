@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
-<head>
+<html lang="vi"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#d9291c">
@@ -387,7 +386,14 @@ a{color:inherit}
 .brand-mini img{flex:none}
 .brand-mini > div{min-width:0}
 .brand-mini strong{overflow:hidden;text-overflow:ellipsis}
-.top-actions{flex:none}
+.topbar-inner{display:grid;grid-template-columns:minmax(0,1fr) auto auto}
+.top-actions{margin-left:0}
+.settings-shortcuts{display:flex;align-items:center;gap:6px}
+.settings-shortcuts button,.footer-admin{min-height:42px;white-space:nowrap;font-size:12px}
+.footer-jump{min-width:42px;padding-inline:8px}
+.footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.footer-copy{flex:1 1 220px}
+.footer-admin{margin-left:auto}
 .export-top{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;white-space:nowrap;font-size:12px}
 .quote-count{background:rgba(0,0,0,.15);border-radius:999px;padding:3px 6px;font-variant-numeric:tabular-nums}
 .reset-selection{width:44px;height:44px;font-size:24px;color:#344054}
@@ -405,7 +411,7 @@ a{color:inherit}
   color:#344054;font-size:11px;font-weight:800;white-space:nowrap
 }
 .quote-select[aria-pressed="true"]{background:#087a55;border-color:#087a55;color:#fff}
-.quote-select:focus-visible,.reset-selection:focus-visible,.export-top:focus-visible{outline:3px solid #1679cf;outline-offset:2px}
+.quote-select:focus-visible,.reset-selection:focus-visible,.export-top:focus-visible,.settings-shortcuts button:focus-visible,.footer-admin:focus-visible{outline:3px solid #1679cf;outline-offset:2px}
 @media(max-width:720px){
   .topbar-inner{gap:6px;padding-inline:8px}
   .brand-mini{gap:4px}
@@ -414,12 +420,27 @@ a{color:inherit}
   .top-actions{gap:5px}
   .top-actions .connection{padding:0;width:12px;justify-content:center;gap:0;font-size:0}
   .top-actions .connection::before{flex:none}
-  .top-actions .admin-desktop{width:36px}
   .export-top{gap:4px;padding-inline:7px;font-size:10px}
   .search-wrap{top:60px}
 }
+@media(max-width:540px){
+  .topbar-inner{grid-template-columns:minmax(0,1fr) auto}
+  .top-actions{grid-row:2;grid-column:1/-1;justify-content:flex-end}
+  .settings-shortcuts{grid-row:1;grid-column:2}
+  .settings-shortcuts button{min-height:40px;padding-block:8px}
+  .search-wrap{top:106px}
+  #catalogSection{scroll-margin-top:182px}
+}
 </style>
-</head>
+
+    <link rel="manifest" href="./manifest.json?v=3-3089273f-4ea594ba">
+    <link rel="icon" href="./ideco-icon-192.png?v=3-3089273f-4ea594ba" type="image/png">
+    <link rel="apple-touch-icon" sizes="180x180" href="./ideco-apple-touch-icon.png?v=3-3089273f-4ea594ba">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Báo giá thuốc Công ty IDECO - V5 đồng bộ giá 6/12 hộp">
+    <script src="./ideco-pwa.js?v=3-3089273f-4ea594ba" defer=""></script>
+  </head>
 <body>
 <div class="app">
   <header class="topbar">
@@ -430,12 +451,15 @@ a{color:inherit}
       </div>
       <div class="top-actions">
         <span id="connectionBadge" class="connection">Đang kết nối</span>
-        <button class="icon-btn admin-desktop" id="adminBtn" title="Quản trị">⚙️</button>
-        <button type="button" class="icon-btn reset-selection" id="resetSelectionBtn" title="Làm lại · Bỏ tất cả lựa chọn" aria-label="Làm lại, bỏ tất cả lựa chọn" disabled>↻</button>
-        <button type="button" class="primary-btn export-top" id="exportTopBtn" disabled>
+        <button type="button" class="icon-btn reset-selection" id="resetSelectionBtn" title="Làm lại · Bỏ tất cả lựa chọn" aria-label="Làm lại, bỏ tất cả lựa chọn" disabled="">↻</button>
+        <button type="button" class="primary-btn export-top" id="exportTopBtn" disabled="">
           <span id="exportTopLabel">XUẤT BÁO GIÁ EXCEL</span>
           <span id="topQuoteCount" class="quote-count" aria-live="polite">0</span>
         </button>
+      </div>
+      <div class="settings-shortcuts">
+        <button type="button" class="outline-btn footer-jump" id="jumpToFooterBtn" title="Xuống chân trang đến Cài đặt 1" aria-label="Cuộn nhanh đến Cài đặt 1">↓ Chân trang</button>
+        <button type="button" class="outline-btn" id="quoteSettingsBtn" aria-haspopup="dialog" aria-controls="quoteSettingsOverlay">⚙ Cài đặt 2</button>
       </div>
     </div>
   </header>
@@ -507,8 +531,8 @@ a{color:inherit}
         </select>
       </div>
       <div class="catalog-actions">
-        <button type="button" id="selectAllBtn" class="primary-btn" disabled aria-describedby="selectionHint">Chọn tất cả kết quả (0)</button>
-        <button type="button" class="outline-btn" data-open-quote>Xem danh sách đã chọn</button>
+        <button type="button" id="selectAllBtn" class="primary-btn" disabled="" aria-describedby="selectionHint">Chọn tất cả kết quả (0)</button>
+        <button type="button" class="outline-btn" data-open-quote="">Xem danh sách đã chọn</button>
         <small id="selectionHint">Chạm thẻ để chọn hoặc bỏ chọn. Chọn tất cả áp dụng cho toàn bộ kết quả lọc, kể cả sản phẩm chưa cuộn tới.</small>
       </div>
       <div id="productGrid" class="product-grid"></div>
@@ -517,9 +541,12 @@ a{color:inherit}
     </section>
   </main>
 
-  <footer class="footer">
-    <b id="footerCompany">CÔNG TY IDECO</b> · Báo giá điện tử. 
-    <span id="footerNotice">Dữ liệu hiển thị theo bảng giá đang được đồng bộ. Vui lòng xác nhận lại với IDECO khi đặt hàng.</span>
+  <footer class="footer" id="siteFooter">
+    <div class="footer-copy">
+      <b id="footerCompany">CÔNG TY IDECO</b> · Báo giá điện tử.
+      <span id="footerNotice">Dữ liệu hiển thị theo bảng giá đang được đồng bộ. Vui lòng xác nhận lại với IDECO khi đặt hàng.</span>
+    </div>
+    <button type="button" class="outline-btn footer-admin" id="adminBtn" aria-haspopup="dialog" aria-controls="adminOverlay">⚙ Cài đặt 1</button>
   </footer>
 </div>
 
@@ -564,23 +591,23 @@ a{color:inherit}
   <div class="modal">
     <div class="modal-head"><h3>Danh sách yêu cầu báo giá</h3><button class="close-btn" data-close="cartOverlay">✕</button></div>
     <div class="modal-body">
-      <div class="admin-status" style="margin-bottom:10px">Chỉnh số lượng nếu cần gửi yêu cầu qua Zalo hoặc email. Tệp Excel liệt kê các mức giá và chiết khấu của toàn bộ sản phẩm đã chọn.</div>
+      <div class="admin-status" style="margin-bottom:10px">Chỉnh số lượng nếu cần gửi yêu cầu qua Zalo hoặc email. Tệp Excel chứa báo giá của toàn bộ sản phẩm đã chọn.</div>
       <div id="cartBody"></div>
     </div>
   </div>
 </div>
 
 <!-- Admin -->
-<div id="adminOverlay" class="overlay hidden">
+<div id="adminOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="adminSettingsTitle">
   <div class="modal wide">
-    <div class="modal-head"><h3>⚙️ Cài đặt Báo giá IDECO</h3><button class="close-btn" data-close="adminOverlay">✕</button></div>
+    <div class="modal-head"><h3 id="adminSettingsTitle">⚙ Cài đặt 1 · Quản trị IDECO</h3><button class="close-btn" data-close="adminOverlay">✕</button></div>
     <div class="modal-body">
       <div id="adminLogin" class="login-card">
-        <h4>Nhập mật khẩu cài đặt</h4>
-        <p>Chỉ cần nhập mật khẩu quản trị để mở phần cập nhật dữ liệu và thông tin hiển thị.</p>
-        <div class="field"><label>Mật khẩu</label><input id="adminPasswordOnly" type="password" placeholder="Nhập mật khẩu cài đặt" autocomplete="current-password"></div>
+        <h4>Nhập mật khẩu Cài đặt 1</h4>
+        <p>Dành cho quản trị viên cập nhật dữ liệu và thông tin công ty.</p>
+        <div class="field"><label for="adminPasswordOnly">Mật khẩu</label><input id="adminPasswordOnly" type="password" placeholder="Nhập mật khẩu cài đặt" autocomplete="current-password"></div>
         <div class="action-row"><button id="adminUnlockBtn" class="primary-btn">🔓 Mở cài đặt</button></div>
-        <div id="loginMessage" class="admin-status hidden"></div>
+        <div id="loginMessage" class="admin-status hidden" role="status"></div>
         <div class="admin-lock-note">Lưu ý: đây là ứng dụng HTML tĩnh. Mật khẩu này giúp khóa giao diện cài đặt; nếu cần mức bảo mật cao hơn có thể nâng cấp thêm Firebase Authentication/Cloud Function sau.</div>
       </div>
 
@@ -606,7 +633,7 @@ a{color:inherit}
           <div id="savedExcelStatus" class="saved-file warn">Chưa kiểm tra dữ liệu Excel đã lưu trên Firebase.</div>
           <div id="importPreview"></div>
           <div class="action-row">
-            <button id="saveExcelDraftBtn" class="primary-btn" disabled>💾 Lưu dữ liệu Excel</button>
+            <button id="saveExcelDraftBtn" class="primary-btn" disabled="">💾 Lưu dữ liệu Excel</button>
             <button id="syncStagingBtn" class="primary-btn">🔄 Đồng bộ ra giao diện</button>
             <button id="deleteExcelDraftBtn" class="danger-btn">🗑 Xóa toàn bộ dữ liệu bảng giá</button>
             <button id="syncEmbeddedBtn" class="outline-btn">Khôi phục dữ liệu ban đầu</button>
@@ -630,6 +657,48 @@ a{color:inherit}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Employee quote settings -->
+<div id="quoteSettingsOverlay" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="quoteSettingsTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="quoteSettingsTitle">⚙ Cài đặt 2 · Xuất báo giá</h3>
+      <button type="button" class="close-btn" data-close="quoteSettingsOverlay" aria-label="Đóng Cài đặt 2">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="quoteSettingsLogin" class="login-card">
+        <h4>Nhập mật khẩu Cài đặt 2</h4>
+        <p>Dành cho nhân viên thiết lập mẫu xuất Excel.</p>
+        <div class="field">
+          <label for="quoteSettingsPassword">Mật khẩu</label>
+          <input id="quoteSettingsPassword" type="password" autocomplete="current-password" required="">
+        </div>
+        <div class="action-row"><button type="submit" id="quoteSettingsUnlockBtn" class="primary-btn">Mở Cài đặt 2</button></div>
+        <div id="quoteSettingsLoginMessage" class="admin-status warn hidden" role="status"></div>
+      </form>
+      <div id="quoteSettingsPanel" class="hidden">
+        <div class="login-card">
+          <h4>Cài đặt 2 · Mẫu báo giá Excel</h4>
+          <p>Mẫu đã lưu sẽ được dùng khi bấm Xuất báo giá Excel trên trình duyệt này.</p>
+          <div class="field">
+            <label for="quoteExportMode">Mẫu xuất báo giá</label>
+            <select id="quoteExportMode">
+              <option value="standard">Bảng đầy đủ · Cả mức 6 và 12 hộp</option>
+              <option value="6">Chỉ báo giá 6 hộp mỗi sản phẩm</option>
+              <option value="12">Chỉ báo giá 12 hộp mỗi sản phẩm</option>
+            </select>
+          </div>
+          <div class="action-row">
+            <button type="button" id="saveQuoteExportModeBtn" class="primary-btn">Lưu mẫu xuất</button>
+            <button type="button" class="outline-btn" data-close="quoteSettingsOverlay">Đóng</button>
+          </div>
+          <div id="quoteSettingsMessage" class="admin-status warn hidden" role="status"></div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -713,6 +782,7 @@ let highDiscount = false;
 let sortMode = "default";
 let searchText = "";
 let visibleCount = 24;
+let footerShortcutActive = false;
 const PAGE_SIZE = 24;
 let db = null;
 let auth = null;
@@ -721,6 +791,9 @@ let remoteReadOK = false;
 const LS_FAV = "ideco_price_favorites_v1";
 const LS_RECENT = "ideco_price_recent_v1";
 const LS_CART = "ideco_price_cart_v1";
+const LS_QUOTE_EXPORT_MODE = "ideco_quote_export_mode_v1";
+const QUOTE_SETTINGS_PASS_HASH = "4735b4da5d8b0e7cef9c1a7c6c2a86e7bacc656f0d903718a2dd47f9d876ad17";
+let quoteSettingsUnlocked = false;
 let favorites = new Set(safeJSON(localStorage.getItem(LS_FAV), []));
 let recent = safeJSON(localStorage.getItem(LS_RECENT), []);
 const cart = Object.assign(Object.create(null), safeJSON(localStorage.getItem(LS_CART), {}));
@@ -925,8 +998,17 @@ function renderProducts(){
 function loadMore(){
   if(visibleCount<filtered.length){ visibleCount+=PAGE_SIZE; renderProducts(); }
 }
-const io=new IntersectionObserver(entries=>{if(entries[0]?.isIntersecting) loadMore();},{rootMargin:"600px"});
-io.observe($("sentinel"));
+const io=new IntersectionObserver(entries=>{
+  if(!footerShortcutActive && entries[0]?.isIntersecting) loadMore();
+},{rootMargin:"600px"});
+const sentinel=$("sentinel");
+io.observe(sentinel);
+window.addEventListener("scroll",()=>{
+  if(!footerShortcutActive || $("siteFooter").getBoundingClientRect().top<window.innerHeight) return;
+  footerShortcutActive=false;
+  io.unobserve(sentinel);
+  io.observe(sentinel);
+},{passive:true});
 
 function openDetail(code){
   const p=productByCode(code); if(!p)return;
@@ -1093,6 +1175,15 @@ async function shareCart(){
   }catch(e){}
 }
 
+function readQuoteExportMode(){
+  try{
+    const mode=localStorage.getItem(LS_QUOTE_EXPORT_MODE);
+    if(mode==="6" || mode==="12") return Number(mode);
+  }catch(err){
+    console.warn("Không đọc được mẫu xuất báo giá:",err);
+  }
+  return 0;
+}
 async function exportQuoteExcel(){
   if(exportingQuote) return;
   const rows=cartRows();
@@ -1102,7 +1193,7 @@ async function exportQuoteExcel(){
   exportingQuote=true;
   updateCartCount();
   try{
-    await downloadQuoteWorkbook(rows);
+    await downloadQuoteWorkbook(rows,readQuoteExportMode());
     showToast(`Đã xuất Excel cho ${rows.length.toLocaleString("vi-VN")} sản phẩm.`);
   }catch(err){
     console.error(err);
@@ -1113,7 +1204,7 @@ async function exportQuoteExcel(){
   }
 }
 
-async function downloadQuoteWorkbook(rows){
+async function downloadQuoteWorkbook(rows,tier){
   const wb=new ExcelJS.Workbook();
   wb.creator=settings.company||DEFAULT_SETTINGS.company;
   wb.created=new Date();
@@ -1124,17 +1215,8 @@ async function downloadQuoteWorkbook(rows){
   const RED="FFEF3323", REDD="FFB91F16", NAVY="FF14213D", WHITE="FFFFFFFF", LIGHT="FFFFF3F1", GREEN="FF087A55", LINE="FFD9DEE8", MUTED="FF667085";
   const thin={style:"thin",color:{argb:LINE}};
   const border={top:thin,left:thin,bottom:thin,right:thin};
-  ws.columns=[
-    {key:"stt",width:6},
-    {key:"name",width:25},
-    {key:"active",width:27},
-    {key:"package",width:25},
-    {key:"price",width:15},
-    {key:"price6",width:17},
-    {key:"discount6",width:12},
-    {key:"price12",width:17},
-    {key:"discount12",width:12}
-  ];
+  const widths=tier?[6,25,27,25,12,17,13,19,18]:[6,25,27,25,15,17,12,17,12];
+  ws.columns=widths.map(width=>({width}));
 
   // Logo IDECO lấy trực tiếp từ logo đang nhúng trong file HTML.
   try{
@@ -1161,11 +1243,17 @@ async function downloadQuoteWorkbook(rows){
   const now=new Date();
   ws.mergeCells("A6:E6"); ws.getCell("A6").value="Kính gửi: Quý khách hàng"; ws.getCell("A6").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
   ws.mergeCells("F6:I6"); ws.getCell("F6").value=`Ngày ${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`; ws.getCell("F6").alignment={horizontal:"right"}; ws.getCell("F6").font={name:"Arial",size:10,italic:true,color:{argb:MUTED}};
-  ws.mergeCells("A7:I7"); ws.getCell("A7").value="IDECO trân trọng gửi Quý khách bảng giá theo từng mức số lượng. Đơn vị tiền tệ: VNĐ."; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
+  ws.mergeCells("A7:I7"); ws.getCell("A7").value=tier
+    ?`Báo giá áp dụng cho ${tier} hộp mỗi sản phẩm. Đơn vị tiền tệ: VNĐ.`
+    :"IDECO trân trọng gửi Quý khách bảng giá theo từng mức số lượng. Đơn vị tiền tệ: VNĐ."; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
 
-  // Tiêu đề bảng: giữ nguyên từng mức giá/chiết khấu của dữ liệu gốc, không tính lại theo số lượng giỏ hàng.
   const hr=9;
-  const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH","ĐƠN GIÁ","GIÁ TỪ 6 HỘP","CHIẾT KHẤU","GIÁ TỪ 12 HỘP","CHIẾT KHẤU"];
+  const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH"];
+  headers.push(...(tier
+    ?["SỐ HỘP","GIÁ NIÊM YẾT / HỘP","CHIẾT KHẤU",`GIÁ TỪ ${tier} HỘP / HỘP`,"THÀNH TIỀN"]
+    :["ĐƠN GIÁ","GIÁ TỪ 6 HỘP","CHIẾT KHẤU","GIÁ TỪ 12 HỘP","CHIẾT KHẤU"]));
+  const moneyCols=tier?[6,8,9]:[5,6,8];
+  const percentCols=tier?[7]:[7,9];
   ws.getRow(hr).values=headers; ws.getRow(hr).height=38;
   headers.forEach((_,i)=>{
     const c=ws.getCell(hr,i+1);
@@ -1175,39 +1263,62 @@ async function downloadQuoteWorkbook(rows){
     c.border=border;
   });
 
+  let quotedTotal=0;
+  let unpricedCount=0;
   rows.forEach(({p},i)=>{
     const rr=hr+1+i;
-    // DỮ LIỆU TRỰC TIẾP TỪ BẢNG GIÁ/WEBSITE:
-    // price = Đơn giá; price6 = Giá ≥6 hộp; discount6 = CK ≥6 hộp;
-    // price12 = Giá ≥12 hộp; discount12 = CK ≥12 hộp.
-    ws.getRow(rr).values=[
-      i+1,
-      p.name,
-      [p.active,p.strength].filter(Boolean).join(" · "),
-      p.package,
-      formatNumberComma(p.price||0),
-      formatNumberComma(p.price6||0),
-      Number(p.discount6||0),
-      formatNumberComma(p.price12||0),
-      Number(p.discount12||0)
-    ];
+    const values=[i+1,p.name,[p.active,p.strength].filter(Boolean).join(" · "),p.package];
+    if(tier){
+      const price=p["price"+tier];
+      const discount=p["discount"+tier];
+      const hasPrice=Number.isFinite(price) && (price>0 || (price===0 && discount===1 && p.price>0));
+      const lineAmount=hasPrice?price*tier:0;
+      if(!hasPrice) unpricedCount++;
+      quotedTotal+=lineAmount;
+      values.push(tier,p.price,hasPrice && Number.isFinite(discount)?discount:null,
+        hasPrice?price:"Chưa có giá",hasPrice?{formula:`E${rr}*H${rr}`,result:lineAmount}:null);
+    }else{
+      values.push(formatNumberComma(p.price||0),formatNumberComma(p.price6||0),
+        Number(p.discount6||0),formatNumberComma(p.price12||0),Number(p.discount12||0));
+    }
+    ws.getRow(rr).values=values;
     ws.getRow(rr).height=36;
     for(let c=1;c<=9;c++){
       const cell=ws.getCell(rr,c);
-      cell.font={name:"Arial",size:10,color:{argb:NAVY},bold:[5,6,8].includes(c)};
+      const isMoney=moneyCols.includes(c);
+      const isPercent=percentCols.includes(c);
+      cell.font={name:"Arial",size:10,color:{argb:NAVY},bold:isMoney};
       cell.border=border;
-      cell.alignment={vertical:"middle",wrapText:true,horizontal:[1,7,9].includes(c)?"center":([5,6,8].includes(c)?"right":"left")};
+      cell.alignment={vertical:"middle",wrapText:true,
+        horizontal:isMoney?"right":c===1 || isPercent || (tier && c===5)?"center":"left"};
+      if(isMoney) cell.numFmt=tier?"#,##0":"@";
+      if(isPercent) cell.numFmt=tier?"0.00%":"0%";
       if(i%2===1) cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFFFFAF9"}};
     }
-    // Giá tiền xuất dưới dạng chuỗi có dấu phẩy hàng nghìn để luôn hiển thị 200,000 theo chuẩn IDECO,
-    // không phụ thuộc thiết lập dấu phân cách của Excel trên từng máy.
-    [5,6,8].forEach(c=>{ ws.getCell(rr,c).numFmt='@'; ws.getCell(rr,c).alignment={vertical:"middle",horizontal:"right"}; });
-    [7,9].forEach(c=>ws.getCell(rr,c).numFmt="0%");
   });
 
-  let r=hr+rows.length+2;
+  let r=hr+rows.length+1;
+  if(tier){
+    ws.mergeCells(r,1,r,8);
+    ws.getCell(r,1).value=unpricedCount?"TẠM TÍNH CÁC DÒNG CÓ GIÁ":"TỔNG TIỀN";
+    ws.getCell(r,1).alignment={horizontal:"right",vertical:"middle"};
+    if(unpricedCount<rows.length){
+      ws.getCell(r,9).value={formula:`SUM(I${hr+1}:I${r-1})`,result:quotedTotal};
+      ws.getCell(r,9).numFmt="#,##0";
+    }
+    [1,9].forEach(c=>{
+      const cell=ws.getCell(r,c);
+      cell.font={name:"Arial",size:11,bold:true,color:{argb:REDD}};
+      cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}};
+    });
+    ws.getRow(r).height=25;
+    r++;
+  }
+  r++;
   ws.mergeCells(r,1,r,9);
-  ws.getCell(r,1).value="Chính sách giá: Đơn giá, giá mua từ 6 hộp và giá mua từ 12 hộp được lấy trực tiếp từ dữ liệu bảng giá đang đồng bộ trên hệ thống IDECO. Hai cột chiết khấu hiển thị đúng tỷ lệ tương ứng của từng mức.";
+  ws.getCell(r,1).value=tier
+    ?`Đơn giá sau chiết khấu lấy từ bảng giá IDECO cho mức ${tier} hộp.${unpricedCount?` Có ${unpricedCount} sản phẩm cần xác nhận giá với IDECO.`:""}`
+    :"Chính sách giá: Đơn giá, giá mua từ 6 hộp và giá mua từ 12 hộp được lấy trực tiếp từ dữ liệu bảng giá đang đồng bộ trên hệ thống IDECO. Hai cột chiết khấu hiển thị đúng tỷ lệ tương ứng của từng mức.";
   ws.getCell(r,1).font={name:"Arial",size:9,italic:true,color:{argb:MUTED}};
   ws.getCell(r,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}};
   ws.getCell(r,1).border=border;
@@ -1229,7 +1340,7 @@ async function downloadQuoteWorkbook(rows){
   const downloadUrl=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=downloadUrl;
   const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
-  a.download=`BAO_GIA_THUOC_IDECO_${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
+  a.download=`BAO_GIA_THUOC_IDECO_${tier?`${tier}_HOP_`:""}${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
 }
 
 function suggestions(){
@@ -1242,7 +1353,20 @@ function suggestions(){
 }
 
 function openOverlay(id){ $(id).classList.remove("hidden"); document.body.style.overflow="hidden"; }
-function closeOverlay(id){ $(id).classList.add("hidden"); document.body.style.overflow=""; }
+function closeOverlay(id){
+  $(id).classList.add("hidden");
+  document.body.style.overflow="";
+  if(id==="adminOverlay"){
+    $("adminPasswordOnly").value="";
+    $("adminBtn").focus({preventScroll:true});
+  }
+  if(id==="quoteSettingsOverlay"){
+    quoteSettingsUnlocked=false;
+    $("quoteSettingsPassword").value="";
+    $("quoteSettingsPanel").classList.add("hidden");
+    $("quoteSettingsBtn").focus({preventScroll:true});
+  }
+}
 function setConnection(mode,text){
   const b=$("connectionBadge"); b.className="connection "+mode; b.textContent=text; b.title=text;
 }
@@ -1464,13 +1588,16 @@ function updateAdminUI(){
   }
 }
 async function unlockAdmin(){
-  const input=$("adminPasswordOnly").value;
+  const field=$("adminPasswordOnly");
+  const input=field.value;
   const hash=await sha256Text(input);
-  if(hash!==ADMIN_PASS_HASH) throw new Error("Mật khẩu không đúng.");
+  if($("adminOverlay").classList.contains("hidden") || field.value!==input) return;
+  if(hash!==ADMIN_PASS_HASH) throw new Error("Mật khẩu Cài đặt 1 không đúng.");
   adminUnlocked=true;
   try { sessionStorage.setItem("ideco_admin_unlocked_v3","1"); } catch {}
   $("adminPasswordOnly").value="";
   updateAdminUI();
+  return true;
 }
 function lockAdmin(){
   adminUnlocked=false;
@@ -1715,12 +1842,83 @@ $("applyFilterBtn").onclick=()=>{applyFilters();closeOverlay("filterOverlay");$(
 $("viewUpdatedBtn").onclick=()=>{onlyUpdated=true;applyFilters();$("catalogSection").scrollIntoView({behavior:"smooth"})};
 $("clearRecentBtn").onclick=()=>{recent=[];localStorage.removeItem(LS_RECENT);renderRecent()};
 $("exportTopBtn").onclick=exportQuoteExcel;
-$("adminBtn").onclick=()=>{updateAdminUI();openOverlay("adminOverlay")};
+$("jumpToFooterBtn").onclick=()=>{
+  footerShortcutActive=true;
+  window.scrollTo({top:document.documentElement.scrollHeight,behavior:"instant"});
+  $("adminBtn").focus({preventScroll:true});
+};
+$("adminBtn").onclick=()=>{
+  $("adminPasswordOnly").value="";
+  $("loginMessage").classList.add("hidden");
+  updateAdminUI();
+  openOverlay("adminOverlay");
+  if(!adminUnlocked) $("adminPasswordOnly").focus();
+};
+$("quoteSettingsBtn").onclick=()=>{
+  $("quoteSettingsPassword").value="";
+  $("quoteSettingsLogin").classList.remove("hidden");
+  $("quoteSettingsLoginMessage").classList.add("hidden");
+  openOverlay("quoteSettingsOverlay");
+  $("quoteSettingsPassword").focus();
+};
+$("quoteSettingsLogin").onsubmit=async event=>{
+  event.preventDefault();
+  const button=$("quoteSettingsUnlockBtn");
+  if(button.disabled) return;
+  const field=$("quoteSettingsPassword");
+  const password=field.value;
+  const message=$("quoteSettingsLoginMessage");
+  message.classList.add("hidden");
+  button.disabled=true;
+  try{
+    const hash=await sha256Text(password);
+    if($("quoteSettingsOverlay").classList.contains("hidden") || field.value!==password) return;
+    if(hash!==QUOTE_SETTINGS_PASS_HASH){
+      message.textContent="Mật khẩu Cài đặt 2 không đúng.";
+      message.classList.remove("hidden");
+      return;
+    }
+    quoteSettingsUnlocked=true;
+    field.value="";
+    $("quoteExportMode").value=String(readQuoteExportMode()||"standard");
+    $("quoteSettingsLogin").classList.add("hidden");
+    $("quoteSettingsMessage").classList.add("hidden");
+    $("quoteSettingsPanel").classList.remove("hidden");
+    $("quoteExportMode").focus();
+  }finally{
+    button.disabled=false;
+  }
+};
+$("saveQuoteExportModeBtn").onclick=()=>{
+  if(!quoteSettingsUnlocked) return;
+  const mode=$("quoteExportMode").value;
+  if(!["standard","6","12"].includes(mode)) return;
+  try{
+    if(mode==="standard") localStorage.removeItem(LS_QUOTE_EXPORT_MODE);
+    else localStorage.setItem(LS_QUOTE_EXPORT_MODE,mode);
+    closeOverlay("quoteSettingsOverlay");
+    showToast(mode==="standard"?"Đã lưu mẫu báo giá đầy đủ":`Đã lưu mẫu báo giá ${mode} hộp`);
+  }catch(err){
+    $("quoteSettingsMessage").textContent="Trình duyệt chưa cho phép lưu mẫu báo giá. Vui lòng kiểm tra cài đặt bộ nhớ.";
+    $("quoteSettingsMessage").classList.remove("hidden");
+  }
+};
 $("excelFile").addEventListener("change",async e=>{try{if(e.target.files[0])await handleExcel(e.target.files[0])}catch(err){$("importStatus").className="admin-status warn";$("importStatus").textContent=err.message}});
 $("adminUnlockBtn").onclick=async()=>{
   $("loginMessage").classList.remove("hidden");$("loginMessage").className="admin-status";
-  try{await unlockAdmin();$("loginMessage").classList.add("hidden");showToast("Đã mở cài đặt")}
-  catch(err){$("loginMessage").className="admin-status warn";$("loginMessage").textContent=err.message||err}
+  const button=$("adminUnlockBtn");
+  if(button.disabled) return;
+  button.disabled=true;
+  try{
+    const unlocked=await unlockAdmin();
+    $("loginMessage").classList.add("hidden");
+    if(unlocked) showToast("Đã mở Cài đặt 1");
+  }catch(err){
+    $("loginMessage").className="admin-status warn";
+    $("loginMessage").textContent=err.message||err;
+  }finally{
+    button.disabled=false;
+  }
 };
 $("adminPasswordOnly").addEventListener("keydown",e=>{if(e.key==="Enter")$("adminUnlockBtn").click()});
 $("adminLockBtn").onclick=()=>{lockAdmin();showToast("Đã khóa cài đặt")};
@@ -1771,5 +1969,6 @@ initData([],"local");
 initFirebase();
 updateAdminUI();
 </script>
-</body>
-</html>
+
+
+</body></html>
