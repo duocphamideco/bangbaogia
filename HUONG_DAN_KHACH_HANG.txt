@@ -1,0 +1,20 @@
+NÂNG CẤP DANH SÁCH KHÁCH HÀNG – CÀI ĐẶT 2
+1. Giải nén và thay các file trên website hiện tại, giữ nguyên cấu hình Firebase.
+2. Mở Cài đặt 2 bằng mật khẩu đang dùng.
+3. Upload DANHSACHKHCTY.xlsx, kiểm tra danh sách và bấm Lưu Firebase Realtime.
+4. Tìm theo tên công ty, người liên hệ, mã hoặc điện thoại; hỗ trợ không dấu. Tick khách cần báo giá.
+5. Đóng Cài đặt 2, chọn sản phẩm và bấm XUẤT BÁO GIÁ EXCEL.
+6. Nhiều khách được xuất thành các sheet riêng trong một file. Không chọn khách thì xuất báo giá chung.
+7. Xóa từng dòng hoặc toàn bộ, tải lại Excel và bấm Lưu để cập nhật Firebase. Danh sách trống cũng có thể lưu.
+8. Danh sách khách hàng đồng bộ qua Firebase. Lựa chọn khách chỉ áp dụng trong phiên đang mở; chọn lại sau khi tải lại trang hoặc khi danh sách được cập nhật từ thiết bị khác.
+9. Dòng tiêu đề Excel: TK ngân hàng: VIETINBANK -TK : 111000111614.
+10. Xuất Excel tạo file tải về; không tự gửi email hay Zalo.
+
+Nếu báo không có quyền Firebase, quản trị cần cấp quyền đọc/ghi cho nhánh quoteCustomers bên trong đường dẫn ứng dụng đang dùng. Không tự mở toàn bộ database công khai.
+
+CẬP NHẬT ĐĂNG NHẬP
+- Có nút con mắt hiện/ẩn mật khẩu Cài đặt 1 và Cài đặt 2.
+- Đăng nhập đúng một lần để tự ghi nhớ trên trình duyệt, kể cả sau khi đóng và mở lại.
+- Cài đặt 1 và 2 ghi nhớ độc lập. Không lưu mật khẩu dạng chữ.
+- Bấm Khóa cài đặt (Cài đặt 1) hoặc Đăng xuất Cài đặt 2 để xóa ghi nhớ tương ứng.
+- Khi xóa dữ liệu trình duyệt, dùng trình duyệt khác hoặc chế độ ẩn danh, cần đăng nhập lại.

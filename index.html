@@ -440,7 +440,10 @@ a{color:inherit}
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="IDEO-BÁO GIÁ">
     <script src="./ideco-pwa.js?v=3-3089273f-75512415" defer=""></script>
-  </head>
+  <style>
+.password-wrap{display:flex;align-items:center;gap:8px}.password-wrap input{flex:1;min-width:0}.password-eye{display:grid;place-items:center;min-width:44px;height:44px;border:1px solid #d9dee8;border-radius:10px;background:#fff;color:#334155;cursor:pointer}.password-eye svg{width:22px;height:22px}.password-eye[aria-pressed="true"]{background:#e8f5ef;color:#087a55}
+</style>
+</head>
 <body>
 <div class="app">
   <header class="topbar">
@@ -605,13 +608,14 @@ a{color:inherit}
       <div id="adminLogin" class="login-card">
         <h4>Nhập mật khẩu Cài đặt 1</h4>
         <p>Dành cho quản trị viên cập nhật dữ liệu và thông tin công ty.</p>
-        <div class="field"><label for="adminPasswordOnly">Mật khẩu</label><input id="adminPasswordOnly" type="password" placeholder="Nhập mật khẩu cài đặt" autocomplete="current-password"></div>
+        <div class="field"><label for="adminPasswordOnly">Mật khẩu</label><div class="password-wrap"><input id="adminPasswordOnly" type="password" placeholder="Nhập mật khẩu cài đặt" autocomplete="current-password"><button type="button" class="password-eye" data-password-eye="adminPasswordOnly" aria-label="Hiện mật khẩu" title="Hiện mật khẩu" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <div class="action-row"><button id="adminUnlockBtn" class="primary-btn">🔓 Mở cài đặt</button></div>
         <div id="loginMessage" class="admin-status hidden" role="status"></div>
         <div class="admin-lock-note">Lưu ý: đây là ứng dụng HTML tĩnh. Mật khẩu này giúp khóa giao diện cài đặt; nếu cần mức bảo mật cao hơn có thể nâng cấp thêm Firebase Authentication/Cloud Function sau.</div>
       </div>
 
       <div id="adminPanel" class="hidden">
+<p>Đã ghi nhớ đăng nhập trên trình duyệt này. Bấm Khóa cài đặt để xóa ghi nhớ.</p>
         <div class="drawer-tabs">
           <button class="tab-btn active" data-tab="data">📊 Dữ liệu Excel</button>
           <button class="tab-btn" data-tab="settings">📝 Thông tin hiển thị</button>
@@ -674,12 +678,31 @@ a{color:inherit}
         <p>Dành cho nhân viên thiết lập mẫu xuất Excel.</p>
         <div class="field">
           <label for="quoteSettingsPassword">Mật khẩu</label>
-          <input id="quoteSettingsPassword" type="password" autocomplete="current-password" required="">
+          <div class="password-wrap"><input id="quoteSettingsPassword" type="password" autocomplete="current-password" required=""><button type="button" class="password-eye" data-password-eye="quoteSettingsPassword" aria-label="Hiện mật khẩu" title="Hiện mật khẩu" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
         </div>
         <div class="action-row"><button type="submit" id="quoteSettingsUnlockBtn" class="primary-btn">Mở Cài đặt 2</button></div>
         <div id="quoteSettingsLoginMessage" class="admin-status warn hidden" role="status"></div>
       </form>
       <div id="quoteSettingsPanel" class="hidden">
+<p>Đã ghi nhớ đăng nhập trên trình duyệt này. <button type="button" id="quoteSettingsLockBtn" class="outline-btn">Đăng xuất Cài đặt 2</button></p>
+        <div class="login-card">
+          <h4>Danh sách khách hàng nhận báo giá</h4>
+          <p>Tải Excel có cột Khách hàng (hoặc Tên công ty) và Người liên hệ. Chọn nhiều khách để xuất mỗi khách một trang tính.</p>
+          <div class="field"><label for="customerFile">Upload danh sách khách hàng</label><input id="customerFile" type="file" accept=".xlsx,.xls"></div>
+          <div class="field"><label for="customerSearch">Tìm khách hàng, người liên hệ, mã hoặc điện thoại</label><input id="customerSearch" type="search" placeholder="Nhập tên có dấu hoặc không dấu…" autocomplete="off"></div>
+          <div class="action-row">
+            <button type="button" id="customerSelectVisible" class="outline-btn">Chọn kết quả tìm kiếm</button>
+            <button type="button" id="customerUnselect" class="outline-btn">Bỏ chọn tất cả</button>
+            <button type="button" id="customerClear" class="outline-btn">Xóa danh sách để tải lại</button>
+            <button type="button" id="customerSave" class="primary-btn">Lưu Firebase Realtime</button>
+          </div>
+          <p id="customerStatus" role="status"></p>
+          <p id="customerCount"></p>
+          <div style="max-height:360px;overflow:auto;border:1px solid #d9dee8;border-radius:12px">
+            <table style="width:100%;min-width:650px;border-collapse:collapse"><thead><tr><th>Chọn</th><th>Mã</th><th>Tên công ty / Khách hàng</th><th>Người liên hệ</th><th>Điện thoại</th><th>Xóa</th></tr></thead><tbody id="customerRows"></tbody></table>
+          </div>
+        </div>
+
         <div class="login-card">
           <h4>Cài đặt 2 · Mẫu báo giá Excel</h4>
           <p>Mẫu đã lưu sẽ được dùng khi bấm Xuất báo giá Excel trên trình duyệt này.</p>
@@ -773,7 +796,7 @@ let pendingImportFileName = "";
 let stagedProducts = [];
 let stagedMeta = null;
 let adminUnlocked = false;
-try { adminUnlocked = sessionStorage.getItem("ideco_admin_unlocked_v3")==="1"; } catch {}
+try { adminUnlocked = localStorage.getItem("ideco_admin_remember_v1")===ADMIN_PASS_HASH; } catch {}
 let settings = {...DEFAULT_SETTINGS};
 let selectedCategory = "Tất cả";
 let onlyUpdated = false;
@@ -794,6 +817,7 @@ const LS_CART = "ideco_price_cart_v1";
 const LS_QUOTE_EXPORT_MODE = "ideco_quote_export_mode_v1";
 const QUOTE_SETTINGS_PASS_HASH = "fd4d10d29037a5761c46d6fa6edc0fb2a52dcd1f9f391a1f61983711d5c3f4c4";
 let quoteSettingsUnlocked = false;
+try { quoteSettingsUnlocked=localStorage.getItem("ideco_quote_remember_v1")===QUOTE_SETTINGS_PASS_HASH; } catch {}
 let favorites = new Set(safeJSON(localStorage.getItem(LS_FAV), []));
 let recent = safeJSON(localStorage.getItem(LS_RECENT), []);
 const cart = Object.assign(Object.create(null), safeJSON(localStorage.getItem(LS_CART), {}));
@@ -1193,7 +1217,9 @@ async function exportQuoteExcel(){
   exportingQuote=true;
   updateCartCount();
   try{
-    await downloadQuoteWorkbook(rows,readQuoteExportMode());
+    const recipients=customerList.filter(c=>customerSelected.has(c.id));
+    if(customerDirty && recipients.length) throw new Error("Vui lòng lưu danh sách khách hàng lên Firebase trước khi xuất.");
+    await downloadQuoteWorkbook(rows,readQuoteExportMode(),recipients.length?recipients:[null]);
     showToast(`Đã xuất Excel cho ${rows.length.toLocaleString("vi-VN")} sản phẩm.`);
   }catch(err){
     console.error(err);
@@ -1204,11 +1230,12 @@ async function exportQuoteExcel(){
   }
 }
 
-async function downloadQuoteWorkbook(rows,tier){
+async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   const wb=new ExcelJS.Workbook();
   wb.creator=settings.company||DEFAULT_SETTINGS.company;
   wb.created=new Date();
-  const ws=wb.addWorksheet("BÁO GIÁ THUỐC",{
+  for(const [recipientIndex,recipient] of recipients.entries()){
+  const ws=wb.addWorksheet(recipients.length===1?"BÁO GIÁ THUỐC":`KH ${recipientIndex+1}`,{
     pageSetup:{paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"9:9",margins:{left:.25,right:.25,top:.35,bottom:.35,header:.2,footer:.2}},
     views:[{showGridLines:false,state:"frozen",ySplit:9}]
   });
@@ -1235,18 +1262,26 @@ async function downloadQuoteWorkbook(rows,tier){
   ws.mergeCells("C2:I2"); ws.getCell("C2").value="Địa chỉ: "+(settings.address||DEFAULT_SETTINGS.address||"");
   ws.getCell("C2").font={name:"Arial",size:10,color:{argb:NAVY}}; ws.getCell("C2").alignment={horizontal:"center",vertical:"middle",wrapText:true}; ws.getRow(2).height=20;
   ws.mergeCells("C3:I3");
-  const contact=[settings.hotline?"Điện thoại: "+settings.hotline:"",settings.orderEmail?"Email: "+settings.orderEmail:""].filter(Boolean).join("   |   ");
+  const contact=[settings.hotline?"Điện thoại: "+settings.hotline:"","TK ngân hàng: VIETINBANK -TK : 111000111614"].filter(Boolean).join("   |   ");
   ws.getCell("C3").value=contact||"BÁO GIÁ ĐIỆN TỬ IDECO"; ws.getCell("C3").font={name:"Arial",size:10,color:{argb:MUTED}}; ws.getCell("C3").alignment={horizontal:"center",vertical:"middle"};
 
   for(let c=1;c<=9;c++) ws.getCell(4,c).border={bottom:{style:"medium",color:{argb:RED}}}; ws.getRow(4).height=8;
   ws.mergeCells("A5:I5"); ws.getCell("A5").value=settings.title||DEFAULT_SETTINGS.title; ws.getCell("A5").font={name:"Arial",size:20,bold:true,color:{argb:REDD}}; ws.getCell("A5").alignment={horizontal:"center",vertical:"middle",wrapText:true}; ws.getRow(5).height=32+24*(ws.getCell("A5").value.split("\n").length-1);
   const now=new Date();
-  ws.mergeCells("A6:E6"); ws.getCell("A6").value="Kính gửi: Quý khách hàng"; ws.getCell("A6").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
+  ws.mergeCells("A6:E6"); ws.getCell("A6").value="Kính gửi: "+(recipient?.company||"Quý khách hàng"); ws.getCell("A6").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
   ws.mergeCells("F6:I6"); ws.getCell("F6").value=`Ngày ${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`; ws.getCell("F6").alignment={horizontal:"right"}; ws.getCell("F6").font={name:"Arial",size:10,italic:true,color:{argb:MUTED}};
   ws.mergeCells("A7:I7"); ws.getCell("A7").value=tier
     ?`Báo giá áp dụng cho ${tier} hộp mỗi sản phẩm. Đơn vị tiền tệ: VNĐ.`
     :"IDECO trân trọng gửi Quý khách bảng giá theo từng mức số lượng. Đơn vị tiền tệ: VNĐ."; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
 
+  ws.getCell("A6").alignment={wrapText:true,vertical:"middle"};
+  ws.getRow(6).height=Math.max(30,Math.ceil(String(ws.getCell("A6").value).length/65)*16);
+  ws.mergeCells("A8:I8");
+  ws.getCell("A8").value=recipient?.contact?"Đồng kính gửi: "+recipient.contact:"";
+  ws.getCell("A8").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
+  ws.getCell("A8").alignment={wrapText:true,vertical:"middle"};
+  ws.getRow(8).height=recipient?.contact?Math.max(24,Math.ceil(recipient.contact.length/110)*16):12;
+  ws.getCell("C3").alignment={horizontal:"center",vertical:"middle",wrapText:true}; ws.getRow(3).height=30;
   const hr=9;
   const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH"];
   headers.push(...(tier
@@ -1335,6 +1370,8 @@ async function downloadQuoteWorkbook(rows,tier){
   ws.autoFilter={from:{row:hr,column:1},to:{row:hr+rows.length,column:9}};
   ws.pageSetup.printArea=`A1:I${r+2}`;
   ws.headerFooter.oddFooter="&CTrang &P / &N";
+  }
+  const now=new Date();
   const buf=await wb.xlsx.writeBuffer();
   const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   const downloadUrl=URL.createObjectURL(blob);
@@ -1358,10 +1395,11 @@ function closeOverlay(id){
   document.body.style.overflow="";
   if(id==="adminOverlay"){
     $("adminPasswordOnly").value="";
+    resetPasswordVisibility("adminPasswordOnly");
     $("adminBtn").focus({preventScroll:true});
   }
   if(id==="quoteSettingsOverlay"){
-    quoteSettingsUnlocked=false;
+    resetPasswordVisibility("quoteSettingsPassword");
     $("quoteSettingsPassword").value="";
     $("quoteSettingsPanel").classList.add("hidden");
     $("quoteSettingsBtn").focus({preventScroll:true});
@@ -1476,6 +1514,7 @@ function initFirebase(){
   try{
     if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
     db=firebase.database(); auth=null;
+    initCustomerSync();
     setConnection("","Đang kết nối");
     let hasReceivedRemoteSnapshot=false;
 
@@ -1594,14 +1633,14 @@ async function unlockAdmin(){
   if($("adminOverlay").classList.contains("hidden") || field.value!==input) return;
   if(hash!==ADMIN_PASS_HASH) throw new Error("Mật khẩu Cài đặt 1 không đúng.");
   adminUnlocked=true;
-  try { sessionStorage.setItem("ideco_admin_unlocked_v3","1"); } catch {}
+  try { localStorage.setItem("ideco_admin_remember_v1",ADMIN_PASS_HASH); } catch { showToast("Trình duyệt không cho lưu đăng nhập. Chỉ ghi nhớ trong lần mở này."); }
   $("adminPasswordOnly").value="";
   updateAdminUI();
   return true;
 }
 function lockAdmin(){
   adminUnlocked=false;
-  try { sessionStorage.removeItem("ideco_admin_unlocked_v3"); } catch {}
+  try { localStorage.removeItem("ideco_admin_remember_v1"); sessionStorage.removeItem("ideco_admin_unlocked_v3"); } catch {}
   updateAdminUI();
 }
 
@@ -1856,10 +1895,13 @@ $("adminBtn").onclick=()=>{
 };
 $("quoteSettingsBtn").onclick=()=>{
   $("quoteSettingsPassword").value="";
-  $("quoteSettingsLogin").classList.remove("hidden");
+  $("quoteSettingsLogin").classList.toggle("hidden",quoteSettingsUnlocked);
+  $("quoteSettingsPanel").classList.toggle("hidden",!quoteSettingsUnlocked);
+  $("quoteExportMode").value=String(readQuoteExportMode()||"standard");
+  resetPasswordVisibility("quoteSettingsPassword");
   $("quoteSettingsLoginMessage").classList.add("hidden");
   openOverlay("quoteSettingsOverlay");
-  $("quoteSettingsPassword").focus();
+  if(!quoteSettingsUnlocked) $("quoteSettingsPassword").focus();
 };
 $("quoteSettingsLogin").onsubmit=async event=>{
   event.preventDefault();
@@ -1879,7 +1921,9 @@ $("quoteSettingsLogin").onsubmit=async event=>{
       return;
     }
     quoteSettingsUnlocked=true;
+    try { localStorage.setItem("ideco_quote_remember_v1",QUOTE_SETTINGS_PASS_HASH); } catch { showToast("Trình duyệt không cho lưu đăng nhập. Chỉ ghi nhớ trong lần mở này."); }
     field.value="";
+    resetPasswordVisibility("quoteSettingsPassword");
     $("quoteExportMode").value=String(readQuoteExportMode()||"standard");
     $("quoteSettingsLogin").classList.add("hidden");
     $("quoteSettingsMessage").classList.add("hidden");
@@ -1919,6 +1963,23 @@ $("adminUnlockBtn").onclick=async()=>{
   }finally{
     button.disabled=false;
   }
+};
+function resetPasswordVisibility(id){
+  $(id).type="password";
+  const button=document.querySelector('[data-password-eye="'+id+'"]');
+  if(button){button.setAttribute("aria-pressed","false");button.setAttribute("aria-label","Hiện mật khẩu");button.title="Hiện mật khẩu";}
+}
+document.querySelectorAll('[data-password-eye]').forEach(button=>button.addEventListener('click',()=>{
+  const input=$(button.dataset.passwordEye),show=input.type==='password';
+  input.type=show?'text':'password';button.setAttribute('aria-pressed',String(show));
+  button.setAttribute('aria-label',show?'Ẩn mật khẩu':'Hiện mật khẩu');button.title=show?'Ẩn mật khẩu':'Hiện mật khẩu';input.focus();
+}));
+$('quoteSettingsLockBtn').onclick=()=>{
+ quoteSettingsUnlocked=false;
+ try{localStorage.removeItem('ideco_quote_remember_v1');}catch{}
+ $('quoteSettingsPanel').classList.add('hidden');$('quoteSettingsLogin').classList.remove('hidden');
+ $('quoteSettingsPassword').value='';resetPasswordVisibility('quoteSettingsPassword');$('quoteSettingsPassword').focus();
+ showToast('Đã đăng xuất Cài đặt 2 và xóa ghi nhớ đăng nhập.');
 };
 $("adminPasswordOnly").addEventListener("keydown",e=>{if(e.key==="Enter")$("adminUnlockBtn").click()});
 $("adminLockBtn").onclick=()=>{lockAdmin();showToast("Đã khóa cài đặt")};
@@ -1966,6 +2027,83 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")document.querySelect
 
 applySettings(DEFAULT_SETTINGS);
 initData([],"local");
+// Customer directory: isolated from product and administrator settings.
+const CUSTOMER_PATH=ROOT_PATH+'/quoteCustomers';
+let customerList=[], customerSelected=new Set(), customerDirty=false, customerSaving=false, customerRef=null, customerBase=null, customerRemote=null;
+function customerStatus(message){$('customerStatus').textContent=message;}
+function customerNormalize(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().trim();}
+function customerVisible(){const q=customerNormalize($('customerSearch').value);return customerList.filter(c=>customerNormalize([c.company,c.contact,c.code,c.phone].join(' ')).includes(q));}
+function renderCustomers(){
+ const visible=customerVisible();
+ $('customerCount').textContent=`${visible.length}/${customerList.length} khách hàng · Đã chọn ${customerSelected.size}${customerDirty?' · Chưa lưu Firebase':''}`;
+ $('customerRows').innerHTML=visible.map(c=>`<tr><td><input type="checkbox" aria-label="Chọn ${esc(c.company)}" data-customer="${esc(c.id)}" ${customerSelected.has(c.id)?'checked':''}></td><td>${esc(c.code)}</td><td>${esc(c.company)}</td><td>${esc(c.contact)}</td><td>${esc(c.phone)}</td><td><button type="button" class="outline-btn" data-delete-customer="${esc(c.id)}">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6">Không có khách hàng phù hợp.</td></tr>';
+ for(const id of ['customerFile','customerClear','customerSave']) $(id).disabled=customerSaving;
+}
+function parseCustomerMatrix(matrix){
+ const aliases={company:['khach hang','ten cong ty','cong ty','ten khach hang'],contact:['nguoi lien he','ten nguoi lien he'],code:['ma','ma khach hang','ma kh'],phone:['dien thoai','so dien thoai','sdt']};
+ let header=-1, cols={};
+ for(let i=0;i<Math.min(matrix.length,30);i++){
+  const normalized=matrix[i].map(customerNormalize);
+  const found=Object.fromEntries(Object.entries(aliases).map(([key,names])=>[key,normalized.findIndex(x=>names.includes(x))]));
+  if(found.company>=0 && found.contact>=0){header=i;cols=found;break;}
+ }
+ if(header<0) throw new Error('Không tìm thấy cột Khách hàng / Tên công ty và Người liên hệ.');
+ const result=[],seen=new Set();
+ for(const row of matrix.slice(header+1)){
+  const value=k=>cols[k]<0?'':String(row[cols[k]]??'').trim();
+  const company=value('company');if(!company)continue;
+  const c={company,contact:value('contact'),code:value('code'),phone:value('phone')};
+  const key=JSON.stringify([c.code,c.company,c.contact,c.phone]);if(seen.has(key))continue;seen.add(key);
+  c.id='kh_'+result.length;result.push(c);
+ }
+ if(!result.length)throw new Error('File không có khách hàng hợp lệ.');
+ return result;
+}
+function initCustomerSync(){
+ customerRef=db.ref(CUSTOMER_PATH);
+ customerRef.on('value',snap=>{
+  const value=snap.val();customerRemote=value;
+  if(customerDirty || customerSaving){customerStatus('Có bản dữ liệu Firebase. Bản đang chỉnh sửa được giữ lại cho đến khi lưu.');return;}
+  if(JSON.stringify(customerBase)!==JSON.stringify(value)) customerSelected.clear();
+  customerBase=value;
+  customerList=Array.isArray(value?.items)?value.items.filter(c=>c&&typeof c.company==='string'):[];
+  customerSelected=new Set([...customerSelected].filter(id=>customerList.some(c=>c.id===id)));
+  renderCustomers();customerStatus(`Đã tải ${customerList.length} khách hàng từ Firebase.`);
+ },error=>customerStatus('Không tải được danh sách Firebase: '+error.message));
+}
+$('customerSearch').oninput=renderCustomers;
+$('customerFile').onchange=async event=>{
+ if(!quoteSettingsUnlocked || customerSaving)return;
+ const file=event.target.files[0];if(!file)return;
+ try{
+  if(!window.XLSX)throw new Error('Thư viện Excel chưa tải. Vui lòng kiểm tra Internet.');
+  const book=XLSX.read(await file.arrayBuffer(),{type:'array'});
+  let imported=null;
+  for(const name of book.SheetNames){try{imported=parseCustomerMatrix(XLSX.utils.sheet_to_json(book.Sheets[name],{header:1,defval:'',raw:false}));break;}catch(e){}}
+  if(!imported)throw new Error('Không có sheet hợp lệ với cột Khách hàng và Người liên hệ.');
+  customerList=imported;customerSelected.clear();customerDirty=true;renderCustomers();customerStatus('Đã đọc '+imported.length+' khách hàng. Bấm Lưu Firebase Realtime để lưu dùng chung.');
+ }catch(error){customerStatus('Không nhập được: '+error.message);}finally{event.target.value='';}
+};
+$('customerRows').onchange=e=>{if(!quoteSettingsUnlocked || !e.target.dataset.customer)return;const id=e.target.dataset.customer;e.target.checked?customerSelected.add(id):customerSelected.delete(id);renderCustomers();};
+$('customerRows').onclick=e=>{const b=e.target.closest('[data-delete-customer]');if(!b||!quoteSettingsUnlocked||customerSaving)return;const id=b.dataset.deleteCustomer;customerList=customerList.filter(c=>c.id!==id);customerSelected.delete(id);customerDirty=true;renderCustomers();};
+$('customerSelectVisible').onclick=()=>{if(!quoteSettingsUnlocked)return;customerVisible().forEach(c=>customerSelected.add(c.id));renderCustomers();};
+$('customerUnselect').onclick=()=>{customerSelected.clear();renderCustomers();};
+$('customerClear').onclick=()=>{if(!quoteSettingsUnlocked||customerSaving)return;if(!confirm('Xóa toàn bộ danh sách đang hiển thị? Thay đổi chỉ lên Firebase khi bấm Lưu.'))return;customerList=[];customerSelected.clear();customerDirty=true;renderCustomers();customerStatus('Đã xóa bản đang chỉnh sửa. Tải Excel mới hoặc bấm Lưu để xóa trên Firebase.');};
+$('customerSave').onclick=async()=>{
+ if(!quoteSettingsUnlocked||customerSaving)return;
+ if(!customerRef){customerStatus('Firebase chưa kết nối.');return;}
+ customerSaving=true;renderCustomers();customerStatus('Đang lưu Firebase…');
+ try{
+  const payload={items:customerList,updatedAt:Date.now()};
+  const base=JSON.stringify(customerBase);
+  const result=await customerRef.transaction(current=>JSON.stringify(current)===base?payload:undefined,undefined,false);
+  if(!result.committed)throw new Error('Danh sách đã được sửa trên thiết bị khác. Hãy tải lại trang để nhận bản mới trước khi nhập lại.');
+  customerBase=result.snapshot.val();customerDirty=false;
+  customerStatus('Đã lưu Firebase Realtime: '+customerList.length+' khách hàng.');
+ }catch(error){customerStatus('Chưa lưu được: '+error.message);}finally{customerSaving=false;renderCustomers();}
+};
+renderCustomers();
+
 initFirebase();
 updateAdminUI();
 </script>
