@@ -18,3 +18,9 @@ CẬP NHẬT ĐĂNG NHẬP
 - Cài đặt 1 và 2 ghi nhớ độc lập. Không lưu mật khẩu dạng chữ.
 - Bấm Khóa cài đặt (Cài đặt 1) hoặc Đăng xuất Cài đặt 2 để xóa ghi nhớ tương ứng.
 - Khi xóa dữ liệu trình duyệt, dùng trình duyệt khác hoặc chế độ ẩn danh, cần đăng nhập lại.
+
+CẬP NHẬT KHUNG RỘNG VÀ SỬA KHÁCH HÀNG
+- Cài đặt 2 mở gần toàn màn hình. Điện thoại vuốt ngang bảng để xem đủ cột.
+- Sửa trực tiếp Tên khách hàng, Người liên hệ, Điện thoại, Địa chỉ, sau đó bấm Lưu Firebase Realtime.
+- Không để trống tên khách hàng khi lưu. Số điện thoại được giữ dạng văn bản để không mất số 0 đầu.
+- Danh sách đã lưu từ bản cũ chưa có địa chỉ sẽ hiển thị ô địa chỉ trống, có thể nhập thêm hoặc tải lại Excel có cột Địa chỉ rồi lưu.

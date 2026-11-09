@@ -443,7 +443,21 @@ a{color:inherit}
   <style>
 .password-wrap{display:flex;align-items:center;gap:8px}.password-wrap input{flex:1;min-width:0}.password-eye{display:grid;place-items:center;min-width:44px;height:44px;border:1px solid #d9dee8;border-radius:10px;background:#fff;color:#334155;cursor:pointer}.password-eye svg{width:22px;height:22px}.password-eye[aria-pressed="true"]{background:#e8f5ef;color:#087a55}
 </style>
-</head>
+<style>
+#quoteSettingsOverlay{padding:12px;align-items:center}
+#quoteSettingsOverlay>.modal{width:calc(100vw - 24px);max-width:none;height:calc(100dvh - 24px);max-height:calc(100dvh - 24px);border-radius:18px}
+#quoteSettingsOverlay .login-card{max-width:none}
+#quoteSettingsLogin{max-width:520px!important;margin:20px auto}
+.customer-table-wrap{max-height:57vh;overflow:auto;border:1px solid #d9dee8;border-radius:12px}
+.customer-table{width:100%;min-width:1120px;border-collapse:separate;border-spacing:0}
+.customer-table th{position:sticky;top:0;z-index:1;background:#edf4fa;text-align:left;padding:12px 8px}
+.customer-table td{padding:8px;border-bottom:1px solid #e5eaf0;vertical-align:top}
+.customer-table tr:nth-child(even){background:#f8fafc}
+.customer-editor{width:100%;min-width:150px;padding:10px;border:1px solid #d4dce7;border-radius:8px;background:#fff;font:inherit;box-sizing:border-box}
+textarea.customer-editor{min-width:240px;min-height:66px;resize:vertical}
+.customer-editor:focus{outline:2px solid #087a55;outline-offset:1px}
+@media(max-width:640px){#quoteSettingsOverlay{padding:4px}#quoteSettingsOverlay>.modal{width:calc(100vw - 8px);height:calc(100dvh - 8px);max-height:calc(100dvh - 8px);border-radius:12px}#quoteSettingsOverlay .modal-body{padding:10px}.customer-table-wrap{max-height:60vh}}
+</style></head>
 <body>
 <div class="app">
   <header class="topbar">
@@ -698,8 +712,8 @@ a{color:inherit}
           </div>
           <p id="customerStatus" role="status"></p>
           <p id="customerCount"></p>
-          <div style="max-height:360px;overflow:auto;border:1px solid #d9dee8;border-radius:12px">
-            <table style="width:100%;min-width:650px;border-collapse:collapse"><thead><tr><th>Chọn</th><th>Mã</th><th>Tên công ty / Khách hàng</th><th>Người liên hệ</th><th>Điện thoại</th><th>Xóa</th></tr></thead><tbody id="customerRows"></tbody></table>
+          <p>Sửa trực tiếp các ô bên dưới, sau đó bấm <b>Lưu Firebase Realtime</b>. Trên điện thoại, vuốt ngang bảng để xem đủ các cột.</p><div class="customer-table-wrap">
+            <table class="customer-table"><thead><tr><th>Chọn</th><th>Mã</th><th>Tên công ty / Khách hàng</th><th>Người liên hệ</th><th>Điện thoại</th><th>Địa chỉ</th><th>Xóa</th></tr></thead><tbody id="customerRows"></tbody></table>
           </div>
         </div>
 
@@ -2032,15 +2046,24 @@ const CUSTOMER_PATH=ROOT_PATH+'/quoteCustomers';
 let customerList=[], customerSelected=new Set(), customerDirty=false, customerSaving=false, customerRef=null, customerBase=null, customerRemote=null;
 function customerStatus(message){$('customerStatus').textContent=message;}
 function customerNormalize(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().trim();}
-function customerVisible(){const q=customerNormalize($('customerSearch').value);return customerList.filter(c=>customerNormalize([c.company,c.contact,c.code,c.phone].join(' ')).includes(q));}
+function customerVisible(){const q=customerNormalize($('customerSearch').value);return customerList.filter(c=>customerNormalize([c.company,c.contact,c.code,c.phone,c.address].join(' ')).includes(q));}
+function customerEditor(c,key,label,multiline=false){
+ const attrs=`class="customer-editor" data-edit-customer="${esc(c.id)}" data-field="${key}" aria-label="${label}" ${customerSaving?'disabled':''}`;
+ return multiline?`<textarea ${attrs} rows="2">${esc(c[key]||'')}</textarea>`:`<input ${attrs} type="${key==='phone'?'tel':'text'}" value="${esc(c[key]||'')}">`;
+}
+function customerSignature(value){
+ if(Array.isArray(value))return '['+value.map(customerSignature).join(',')+']';
+ if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+customerSignature(value[k])).join(',')+'}';
+ return JSON.stringify(value);
+}
 function renderCustomers(){
  const visible=customerVisible();
  $('customerCount').textContent=`${visible.length}/${customerList.length} khách hàng · Đã chọn ${customerSelected.size}${customerDirty?' · Chưa lưu Firebase':''}`;
- $('customerRows').innerHTML=visible.map(c=>`<tr><td><input type="checkbox" aria-label="Chọn ${esc(c.company)}" data-customer="${esc(c.id)}" ${customerSelected.has(c.id)?'checked':''}></td><td>${esc(c.code)}</td><td>${esc(c.company)}</td><td>${esc(c.contact)}</td><td>${esc(c.phone)}</td><td><button type="button" class="outline-btn" data-delete-customer="${esc(c.id)}">Xóa</button></td></tr>`).join('')||'<tr><td colspan="6">Không có khách hàng phù hợp.</td></tr>';
+ $('customerRows').innerHTML=visible.map(c=>`<tr><td><input type="checkbox" aria-label="Chọn ${esc(c.company)}" data-customer="${esc(c.id)}" ${customerSelected.has(c.id)?'checked':''}></td><td>${esc(c.code)}</td><td>${customerEditor(c,'company','Tên khách hàng',true)}</td><td>${customerEditor(c,'contact','Người liên hệ')}</td><td>${customerEditor(c,'phone','Điện thoại')}</td><td>${customerEditor(c,'address','Địa chỉ',true)}</td><td><button type="button" class="outline-btn" data-delete-customer="${esc(c.id)}">Xóa</button></td></tr>`).join('')||'<tr><td colspan="7">Không có khách hàng phù hợp.</td></tr>';
  for(const id of ['customerFile','customerClear','customerSave']) $(id).disabled=customerSaving;
 }
 function parseCustomerMatrix(matrix){
- const aliases={company:['khach hang','ten cong ty','cong ty','ten khach hang'],contact:['nguoi lien he','ten nguoi lien he'],code:['ma','ma khach hang','ma kh'],phone:['dien thoai','so dien thoai','sdt']};
+ const aliases={company:['khach hang','ten cong ty','cong ty','ten khach hang'],contact:['nguoi lien he','ten nguoi lien he'],code:['ma','ma khach hang','ma kh'],phone:['dien thoai','so dien thoai','sdt'],address:['dia chi','dia chi khach hang','dia chi cong ty']};
  let header=-1, cols={};
  for(let i=0;i<Math.min(matrix.length,30);i++){
   const normalized=matrix[i].map(customerNormalize);
@@ -2052,8 +2075,8 @@ function parseCustomerMatrix(matrix){
  for(const row of matrix.slice(header+1)){
   const value=k=>cols[k]<0?'':String(row[cols[k]]??'').trim();
   const company=value('company');if(!company)continue;
-  const c={company,contact:value('contact'),code:value('code'),phone:value('phone')};
-  const key=JSON.stringify([c.code,c.company,c.contact,c.phone]);if(seen.has(key))continue;seen.add(key);
+  const c={company,contact:value('contact'),code:value('code'),phone:value('phone'),address:value('address')};
+  const key=JSON.stringify([c.code,c.company,c.contact,c.phone,c.address]);if(seen.has(key))continue;seen.add(key);
   c.id='kh_'+result.length;result.push(c);
  }
  if(!result.length)throw new Error('File không có khách hàng hợp lệ.');
@@ -2084,6 +2107,15 @@ $('customerFile').onchange=async event=>{
   customerList=imported;customerSelected.clear();customerDirty=true;renderCustomers();customerStatus('Đã đọc '+imported.length+' khách hàng. Bấm Lưu Firebase Realtime để lưu dùng chung.');
  }catch(error){customerStatus('Không nhập được: '+error.message);}finally{event.target.value='';}
 };
+$('customerRows').oninput=e=>{
+ if(!quoteSettingsUnlocked||customerSaving)return;
+ const id=e.target.dataset.editCustomer,key=e.target.dataset.field;
+ if(!id||!['company','contact','phone','address'].includes(key))return;
+ const customer=customerList.find(c=>c.id===id);if(!customer)return;
+ customer[key]=e.target.value;customerDirty=true;
+ $('customerCount').textContent=`${customerList.length} khách hàng · Đã chọn ${customerSelected.size} · Chưa lưu Firebase`;
+ customerStatus('Đã chỉnh sửa. Bấm Lưu Firebase Realtime để lưu thay đổi.');
+};
 $('customerRows').onchange=e=>{if(!quoteSettingsUnlocked || !e.target.dataset.customer)return;const id=e.target.dataset.customer;e.target.checked?customerSelected.add(id):customerSelected.delete(id);renderCustomers();};
 $('customerRows').onclick=e=>{const b=e.target.closest('[data-delete-customer]');if(!b||!quoteSettingsUnlocked||customerSaving)return;const id=b.dataset.deleteCustomer;customerList=customerList.filter(c=>c.id!==id);customerSelected.delete(id);customerDirty=true;renderCustomers();};
 $('customerSelectVisible').onclick=()=>{if(!quoteSettingsUnlocked)return;customerVisible().forEach(c=>customerSelected.add(c.id));renderCustomers();};
@@ -2091,12 +2123,13 @@ $('customerUnselect').onclick=()=>{customerSelected.clear();renderCustomers();};
 $('customerClear').onclick=()=>{if(!quoteSettingsUnlocked||customerSaving)return;if(!confirm('Xóa toàn bộ danh sách đang hiển thị? Thay đổi chỉ lên Firebase khi bấm Lưu.'))return;customerList=[];customerSelected.clear();customerDirty=true;renderCustomers();customerStatus('Đã xóa bản đang chỉnh sửa. Tải Excel mới hoặc bấm Lưu để xóa trên Firebase.');};
 $('customerSave').onclick=async()=>{
  if(!quoteSettingsUnlocked||customerSaving)return;
+ if(customerList.some(c=>!String(c.company||'').trim())){customerStatus('Tên khách hàng không được để trống. Vui lòng nhập tên trước khi lưu.');return;}
  if(!customerRef){customerStatus('Firebase chưa kết nối.');return;}
  customerSaving=true;renderCustomers();customerStatus('Đang lưu Firebase…');
  try{
-  const payload={items:customerList,updatedAt:Date.now()};
-  const base=JSON.stringify(customerBase);
-  const result=await customerRef.transaction(current=>JSON.stringify(current)===base?payload:undefined,undefined,false);
+  const payload={items:JSON.parse(JSON.stringify(customerList)),updatedAt:Date.now()};
+  const base=customerSignature(customerBase);
+  const result=await customerRef.transaction(current=>customerSignature(current)===base?payload:undefined,undefined,false);
   if(!result.committed)throw new Error('Danh sách đã được sửa trên thiết bị khác. Hãy tải lại trang để nhận bản mới trước khi nhập lại.');
   customerBase=result.snapshot.val();customerDirty=false;
   customerStatus('Đã lưu Firebase Realtime: '+customerList.length+' khách hàng.');
