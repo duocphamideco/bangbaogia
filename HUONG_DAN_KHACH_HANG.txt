@@ -24,3 +24,9 @@ CẬP NHẬT KHUNG RỘNG VÀ SỬA KHÁCH HÀNG
 - Sửa trực tiếp Tên khách hàng, Người liên hệ, Điện thoại, Địa chỉ, sau đó bấm Lưu Firebase Realtime.
 - Không để trống tên khách hàng khi lưu. Số điện thoại được giữ dạng văn bản để không mất số 0 đầu.
 - Danh sách đã lưu từ bản cũ chưa có địa chỉ sẽ hiển thị ô địa chỉ trống, có thể nhập thêm hoặc tải lại Excel có cột Địa chỉ rồi lưu.
+
+CẬP NHẬT KHUNG GIÁ BÁN LẺ (6/12 → 15/50 HỘP)
+- Sản phẩm có giá bán lẻ dưới ngưỡng (mặc định 80,000đ) giữ nguyên mức chiết khấu, nhưng bậc 1 áp dụng từ 15 hộp (thay 6 hộp) và bậc 2 từ 50 hộp (thay 12 hộp).
+- Ngưỡng do quản trị đặt trong file TRACUU (thanh "Khung giá bán lẻ"), lưu tại Firebase appAccessConfig/tierPolicy; ứng dụng này tự cập nhật theo thời gian thực.
+- Thẻ sản phẩm, chi tiết, giỏ báo giá và file Excel báo giá đều hiển thị đúng số hộp áp dụng cho từng sản phẩm.
+- Quyền Firebase: cần cho phép đọc nhánh appAccessConfig/tierPolicy.

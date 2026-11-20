@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#d9291c">
 <meta name="description" content="Báo giá thuốc Công ty IDECO - tra cứu nhanh tên thuốc, hoạt chất, công dụng, quy cách, giá và chiết khấu.">
-<title>Báo giá thuốc Công ty IDECO - V5 đồng bộ giá 6/12 hộp</title>
+<title>Báo giá thuốc Công ty IDECO - V6 khung giá 6/12 · 15/50 hộp</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
@@ -220,6 +220,8 @@ a{color:inherit}
 .price-main{font-size:24px;font-weight:950;letter-spacing:-.025em;color:#b82016}
 .price-unit{font-size:11px;color:var(--muted);font-weight:650}
 .discount-row{display:grid;gap:8px;margin-top:10px}
+.tier-band-chip{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 10px;border-radius:999px;background:#efe7ff;color:#5b21b6;border:1px solid #d6c5fb;font-size:10.5px;font-weight:900;letter-spacing:.02em}
+.detail-price .tier-band-chip{margin:6px 0 2px}
 .discount{
   background:var(--success-bg);color:var(--success);border-radius:11px;padding:8px 10px;font-size:11px;font-weight:850
 }
@@ -723,9 +725,9 @@ textarea.customer-editor{min-width:240px;min-height:66px;resize:vertical}
           <div class="field">
             <label for="quoteExportMode">Mẫu xuất báo giá</label>
             <select id="quoteExportMode">
-              <option value="standard">Bảng đầy đủ · Cả mức 6 và 12 hộp</option>
-              <option value="6">Chỉ báo giá 6 hộp mỗi sản phẩm</option>
-              <option value="12">Chỉ báo giá 12 hộp mỗi sản phẩm</option>
+              <option value="standard">Bảng đầy đủ · Cả 2 bậc (6 & 12 hộp · SP giá lẻ thấp: 15 & 50 hộp)</option>
+              <option value="6">Chỉ bậc 1 · từ 6 hộp (SP giá lẻ thấp: từ 15 hộp)</option>
+              <option value="12">Chỉ bậc 2 · từ 12 hộp (SP giá lẻ thấp: từ 50 hộp)</option>
             </select>
           </div>
           <div class="action-row">
@@ -846,6 +848,19 @@ function normalizeText(s){
 function formatNumberComma(v){ return new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(Math.round(Number(v||0))); }
 function formatMoney(v){ return formatNumberComma(v) + "đ"; }
 function formatPct(v){ return Math.round(Number(v||0)*100) + "%"; }
+// ===== KHUNG GIÁ BÁN LẺ (đồng bộ appAccessConfig/tierPolicy với file TRACUU) =====
+// SP có giá bán lẻ < ngưỡng: giữ nguyên mức CK của bậc 1 / bậc 2 nhưng số hộp tối thiểu là 15 / 50 thay cho 6 / 12.
+let TIER_THRESHOLD = 80000;
+function tierIsLow(p){ return TIER_THRESHOLD>0 && Number(p&&p.price)>0 && Number(p.price)<TIER_THRESHOLD; }
+function tierQty(p, step){ return tierIsLow(p) ? (step===12?50:15) : step; }
+function tierChip(p){ return tierIsLow(p) ? `<div class="tier-band-chip">📦 Giá lẻ dưới ${formatNumberComma(TIER_THRESHOLD)}đ · mua từ 15 / 50 hộp</div>` : ""; }
+function tierRerender(){
+  try{
+    if(!products || !products.length) return;
+    renderFeatured(); renderRecent(); renderProducts();
+    if(!$("cartOverlay").classList.contains("hidden")) renderCart();
+  }catch(e){ console.warn("tierRerender:",e); }
+}
 function maxDiscount(p){ return Math.max(Number(p.discount6||0), Number(p.discount12||0)); }
 function clampText(s,n=70){ s=String(s||""); return s.length>n?s.slice(0,n-1)+"…":s; }
 function showToast(msg){
@@ -1007,11 +1022,12 @@ function productCard(p){
     <div class="use-text"><b>Công dụng:</b> ${esc(p.use)}</div>
     <div class="price-panel">
       <div><span class="price-main">${formatMoney(p.price)}</span> <span class="price-unit">giá niêm yết</span></div>
+      ${tierChip(p)}
       <div class="discount-row">
-        <div class="price6-line"><span>Từ 6 hộp · CK ${formatPct(p.discount6)}</span><b>${formatMoney(p.price6)}</b></div>
+        <div class="price6-line"><span>Từ ${tierQty(p,6)} hộp · CK ${formatPct(p.discount6)}</span><b>${formatMoney(p.price6)}</b></div>
       </div>
       <div class="price12-hero">
-        <div class="price12-label">🔥 GIÁ ƯU ĐÃI TỪ 12 HỘP · CK ${formatPct(p.discount12)}</div>
+        <div class="price12-label">🔥 GIÁ ƯU ĐÃI TỪ ${tierQty(p,12)} HỘP · CK ${formatPct(p.discount12)}</div>
         <div class="price12-main">${formatMoney(p.price12)}</div>
         <div class="price12-sub">Tiết kiệm ${formatMoney(Math.max(0,p.price-p.price12))}/hộp so với giá niêm yết</div>
       </div>
@@ -1060,9 +1076,10 @@ function openDetail(code){
     <div class="detail-price">
       <div class="price-unit">ĐƠN GIÁ</div>
       <div class="big">${formatMoney(p.price)}</div>
+      ${tierChip(p)}
       <div class="detail-discounts">
-        <div class="tier">Từ <b>6 hộp</b><div>CK ${formatPct(p.discount6)}</div><b>${formatMoney(p.price6)}/hộp</b></div>
-        <div class="tier best-tier"><div>🔥 GIÁ TỐT NHẤT</div><b>Từ 12 hộp</b><div>CK ${formatPct(p.discount12)}</div><b>${formatMoney(p.price12)}/hộp</b><div class="best-note">Tiết kiệm ${formatMoney(Math.max(0,p.price-p.price12))}/hộp</div></div>
+        <div class="tier">Từ <b>${tierQty(p,6)} hộp</b><div>CK ${formatPct(p.discount6)}</div><b>${formatMoney(p.price6)}/hộp</b></div>
+        <div class="tier best-tier"><div>🔥 GIÁ TỐT NHẤT</div><b>Từ ${tierQty(p,12)} hộp</b><div>CK ${formatPct(p.discount12)}</div><b>${formatMoney(p.price12)}/hộp</b><div class="best-note">Tiết kiệm ${formatMoney(Math.max(0,p.price-p.price12))}/hộp</div></div>
       </div>
     </div>
     <div class="detail-list">
@@ -1139,8 +1156,8 @@ function setCartQty(code,qty){
   updateSelection();
 }
 function unitPriceFor(p,qty){
-  if(qty>=12 && p.price12>0)return p.price12;
-  if(qty>=6 && p.price6>0)return p.price6;
+  if(qty>=tierQty(p,12) && p.price12>0)return p.price12;
+  if(qty>=tierQty(p,6) && p.price6>0)return p.price6;
   return p.price;
 }
 function cartRows(){
@@ -1257,6 +1274,11 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   const thin={style:"thin",color:{argb:LINE}};
   const border={top:thin,left:thin,bottom:thin,right:thin};
   const widths=tier?[6,25,27,25,12,17,13,19,18]:[6,25,27,25,15,17,12,17,12];
+  // Khung giá bán lẻ: mỗi dòng có thể áp dụng 6/12 hộp hoặc 15/50 hộp
+  const tierLowCount=rows.filter(({p})=>tierIsLow(p)).length;
+  const tierMixed=tierLowCount>0 && tierLowCount<rows.length, tierAllLow=rows.length>0 && tierLowCount===rows.length;
+  const tierThTxt=formatNumberComma(TIER_THRESHOLD)+"đ";
+  const tierOneQty=tier?(tierAllLow?tierQty({price:1},tier):(tierLowCount?null:tier)):null;
   ws.columns=widths.map(width=>({width}));
 
   // Logo IDECO lấy trực tiếp từ logo đang nhúng trong file HTML.
@@ -1285,7 +1307,8 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   ws.mergeCells("A6:E6"); ws.getCell("A6").value="Kính gửi: "+(recipient?.company||"Quý khách hàng"); ws.getCell("A6").font={name:"Arial",size:11,bold:true,color:{argb:NAVY}};
   ws.mergeCells("F6:I6"); ws.getCell("F6").value=`Ngày ${String(now.getDate()).padStart(2,"0")}/${String(now.getMonth()+1).padStart(2,"0")}/${now.getFullYear()}`; ws.getCell("F6").alignment={horizontal:"right"}; ws.getCell("F6").font={name:"Arial",size:10,italic:true,color:{argb:MUTED}};
   ws.mergeCells("A7:I7"); ws.getCell("A7").value=tier
-    ?`Báo giá áp dụng cho ${tier} hộp mỗi sản phẩm. Đơn vị tiền tệ: VNĐ.`
+    ?(tierOneQty?`Báo giá áp dụng cho ${tierOneQty} hộp mỗi sản phẩm. Đơn vị tiền tệ: VNĐ.`
+      :`Báo giá bậc ${tier===6?1:2}: SP giá lẻ từ ${tierThTxt} áp dụng ${tier} hộp, SP giá lẻ dưới ${tierThTxt} áp dụng ${tierQty({price:1},tier)} hộp (xem cột SỐ HỘP). Đơn vị tiền tệ: VNĐ.`)
     :"IDECO trân trọng gửi Quý khách bảng giá theo từng mức số lượng. Đơn vị tiền tệ: VNĐ."; ws.getCell("A7").font={name:"Arial",size:10,color:{argb:NAVY}};
 
   ws.getCell("A6").alignment={wrapText:true,vertical:"middle"};
@@ -1299,8 +1322,10 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   const hr=9;
   const headers=["STT","TÊN THUỐC","HOẠT CHẤT / HÀM LƯỢNG","QUY CÁCH"];
   headers.push(...(tier
-    ?["SỐ HỘP","GIÁ NIÊM YẾT / HỘP","CHIẾT KHẤU",`GIÁ TỪ ${tier} HỘP / HỘP`,"THÀNH TIỀN"]
-    :["ĐƠN GIÁ","GIÁ TỪ 6 HỘP","CHIẾT KHẤU","GIÁ TỪ 12 HỘP","CHIẾT KHẤU"]));
+    ?["SỐ HỘP","GIÁ NIÊM YẾT / HỘP","CHIẾT KHẤU",tierOneQty?`GIÁ TỪ ${tierOneQty} HỘP / HỘP`:"GIÁ ƯU ĐÃI / HỘP","THÀNH TIỀN"]
+    :(tierAllLow?["ĐƠN GIÁ","GIÁ TỪ 15 HỘP","CHIẾT KHẤU","GIÁ TỪ 50 HỘP","CHIẾT KHẤU"]
+      :tierMixed?["ĐƠN GIÁ","GIÁ BẬC 1 (6 HỘP · 15 HỘP*)","CHIẾT KHẤU","GIÁ BẬC 2 (12 HỘP · 50 HỘP*)","CHIẾT KHẤU"]
+      :["ĐƠN GIÁ","GIÁ TỪ 6 HỘP","CHIẾT KHẤU","GIÁ TỪ 12 HỘP","CHIẾT KHẤU"])));
   const moneyCols=tier?[6,8,9]:[5,6,8];
   const percentCols=tier?[7]:[7,9];
   ws.getRow(hr).values=headers; ws.getRow(hr).height=38;
@@ -1321,14 +1346,16 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
       const price=p["price"+tier];
       const discount=p["discount"+tier];
       const hasPrice=Number.isFinite(price) && (price>0 || (price===0 && discount===1 && p.price>0));
-      const lineAmount=hasPrice?price*tier:0;
+      const rowQty=tierQty(p,tier);
+      const lineAmount=hasPrice?price*rowQty:0;
       if(!hasPrice) unpricedCount++;
       quotedTotal+=lineAmount;
-      values.push(tier,p.price,hasPrice && Number.isFinite(discount)?discount:null,
+      values.push(rowQty,p.price,hasPrice && Number.isFinite(discount)?discount:null,
         hasPrice?price:"Chưa có giá",hasPrice?{formula:`E${rr}*H${rr}`,result:lineAmount}:null);
     }else{
-      values.push(formatNumberComma(p.price||0),formatNumberComma(p.price6||0),
-        Number(p.discount6||0),formatNumberComma(p.price12||0),Number(p.discount12||0));
+      const lowMark=tierMixed && tierIsLow(p);
+      values.push(formatNumberComma(p.price||0),formatNumberComma(p.price6||0)+(lowMark?"\n(từ 15 hộp)":""),
+        Number(p.discount6||0),formatNumberComma(p.price12||0)+(lowMark?"\n(từ 50 hộp)":""),Number(p.discount12||0));
     }
     ws.getRow(rr).values=values;
     ws.getRow(rr).height=36;
@@ -1366,7 +1393,8 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   r++;
   ws.mergeCells(r,1,r,9);
   ws.getCell(r,1).value=tier
-    ?`Đơn giá sau chiết khấu lấy từ bảng giá IDECO cho mức ${tier} hộp.${unpricedCount?` Có ${unpricedCount} sản phẩm cần xác nhận giá với IDECO.`:""}`
+    ?`Đơn giá sau chiết khấu lấy từ bảng giá IDECO cho ${tierOneQty?`mức ${tierOneQty} hộp`:`bậc ${tier===6?1:2} (SP giá lẻ dưới ${tierThTxt} áp dụng ${tierQty({price:1},tier)} hộp)`}.${unpricedCount?` Có ${unpricedCount} sản phẩm cần xác nhận giá với IDECO.`:""}`
+    :tierLowCount?`Chính sách giá theo khung giá bán lẻ: SP giá lẻ từ ${tierThTxt} áp dụng mức mua từ 6 hộp và 12 hộp; SP giá lẻ dưới ${tierThTxt} áp dụng cùng mức chiết khấu nhưng mua từ 15 hộp và 50 hộp${tierMixed?" (* ghi chú ngay dưới giá)":""}. Giá lấy trực tiếp từ bảng giá đang đồng bộ trên hệ thống IDECO.`
     :"Chính sách giá: Đơn giá, giá mua từ 6 hộp và giá mua từ 12 hộp được lấy trực tiếp từ dữ liệu bảng giá đang đồng bộ trên hệ thống IDECO. Hai cột chiết khấu hiển thị đúng tỷ lệ tương ứng của từng mức.";
   ws.getCell(r,1).font={name:"Arial",size:9,italic:true,color:{argb:MUTED}};
   ws.getCell(r,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:LIGHT}};
@@ -1391,7 +1419,8 @@ async function downloadQuoteWorkbook(rows,tier,recipients=[null]){
   const downloadUrl=URL.createObjectURL(blob);
   const a=document.createElement("a"); a.href=downloadUrl;
   const ds=`${now.getFullYear()}${String(now.getMonth()+1).padStart(2,"0")}${String(now.getDate()).padStart(2,"0")}`;
-  a.download=`BAO_GIA_THUOC_IDECO_${tier?`${tier}_HOP_`:""}${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
+  const fileQtys=tier?new Set(rows.map(({p})=>tierQty(p,tier))):new Set();
+  a.download=`BAO_GIA_THUOC_IDECO_${tier?(fileQtys.size===1?`${[...fileQtys][0]}_HOP_`:`BAC${tier===6?1:2}_`):""}${ds}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(downloadUrl),30000);
 }
 
 function suggestions(){
@@ -1553,6 +1582,12 @@ function initFirebase(){
         setConnection('offline','Chưa xác minh được giá / chiết khấu: '+err.message);
       });
     });
+    // Khung giá bán lẻ (ngưỡng đặt ở file TRACUU) — đổi là cập nhật ngay số hộp hiển thị
+    db.ref('appAccessConfig/tierPolicy').on('value',snap=>{
+      const v=snap.val();
+      TIER_THRESHOLD = v ? (Number(v.threshold)||0) : 80000;
+      tierRerender();
+    },err=>console.warn('tierPolicy:',err));
     db.ref('.info/connected').on('value',snap=>{
       if(!snap.val()) { remoteReadOK=false; setConnection('offline','Mất kết nối · giá chưa được xác minh lại'); }
       else refresh();
@@ -1955,7 +1990,7 @@ $("saveQuoteExportModeBtn").onclick=()=>{
     if(mode==="standard") localStorage.removeItem(LS_QUOTE_EXPORT_MODE);
     else localStorage.setItem(LS_QUOTE_EXPORT_MODE,mode);
     closeOverlay("quoteSettingsOverlay");
-    showToast(mode==="standard"?"Đã lưu mẫu báo giá đầy đủ":`Đã lưu mẫu báo giá ${mode} hộp`);
+    showToast(mode==="standard"?"Đã lưu mẫu báo giá đầy đủ":`Đã lưu mẫu báo giá bậc ${mode==="6"?1:2} (${mode} hộp · SP giá lẻ thấp: ${mode==="6"?15:50} hộp)`);
   }catch(err){
     $("quoteSettingsMessage").textContent="Trình duyệt chưa cho phép lưu mẫu báo giá. Vui lòng kiểm tra cài đặt bộ nhớ.";
     $("quoteSettingsMessage").classList.remove("hidden");
